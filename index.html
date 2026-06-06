@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-side="balance">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>goodevil.club — pick a side, or don't</title>
+  <meta name="description" content="goodevil.club — a small experiment in duality. Good, evil, and everything balanced in between." />
+  <meta name="theme-color" content="#0e0e12" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="goodevil.club" />
+  <meta property="og:description" content="Pick a side, or don't. A small experiment in duality." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://goodevil.club" />
+
+  <style>
+    :root {
+      --bg: #0e0e12;
+      --fg: #f4f4f6;
+      --muted: #9a9aa8;
+      --good: #6ee7b7;
+      --good-deep: #059669;
+      --evil: #fb7185;
+      --evil-deep: #be123c;
+      --line: rgba(255, 255, 255, 0.08);
+      --accent: var(--fg);
+      --halo-1: var(--good);
+      --halo-2: var(--evil);
+      --transition: 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Side themes ---------------------------------------------------- */
+    html[data-side="good"] {
+      --bg: #061914;
+      --fg: #eafff6;
+      --muted: #8fd9be;
+      --accent: var(--good);
+      --halo-1: var(--good);
+      --halo-2: var(--good-deep);
+    }
+    html[data-side="evil"] {
+      --bg: #190608;
+      --fg: #ffeef0;
+      --muted: #e09aa4;
+      --accent: var(--evil);
+      --halo-1: var(--evil);
+      --halo-2: var(--evil-deep);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      transition: background var(--transition), color var(--transition);
+      overflow-x: hidden;
+    }
+
+    /* Animated dual halo backdrop ----------------------------------- */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .halo {
+      position: absolute;
+      width: 60vmax;
+      height: 60vmax;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      transition: background var(--transition), opacity var(--transition);
+      animation: drift 22s ease-in-out infinite alternate;
+    }
+    .halo.one { background: var(--halo-1); top: -20vmax; left: -10vmax; }
+    .halo.two { background: var(--halo-2); bottom: -20vmax; right: -10vmax; animation-delay: -11s; }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(8vmax, 6vmax) scale(1.15); }
+    }
+
+    /* Layout -------------------------------------------------------- */
+    main {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6vh 24px;
+      gap: 2.2rem;
+    }
+
+    .eyebrow {
+      font-size: 0.8rem;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color var(--transition);
+    }
+
+    h1 {
+      font-size: clamp(2.8rem, 11vw, 7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+    h1 .good { color: var(--good); }
+    h1 .evil { color: var(--evil); }
+    h1 .slash { color: var(--muted); font-weight: 300; }
+
+    .tagline {
+      max-width: 30ch;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      transition: color var(--transition);
+    }
+
+    /* Side picker --------------------------------------------------- */
+    .picker {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--fg);
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.85rem 1.6rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 150ms ease, border-color 200ms ease, background 200ms ease;
+      backdrop-filter: blur(6px);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+    .btn[data-pick="good"]:hover { border-color: var(--good); color: var(--good); }
+    .btn[data-pick="evil"]:hover { border-color: var(--evil); color: var(--evil); }
+    .btn[data-pick="balance"]:hover { border-color: var(--fg); }
+    .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+    .verdict {
+      min-height: 1.5em;
+      font-size: 0.95rem;
+      color: var(--muted);
+      transition: color var(--transition);
+    }
+
+    footer {
+      position: fixed;
+      bottom: 18px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      transition: color var(--transition);
+    }
+    footer a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); }
+    footer a:hover { color: var(--fg); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .halo { animation: none; }
+      * { transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <div class="halo one"></div>
+    <div class="halo two"></div>
+  </div>
+
+  <main>
+    <p class="eyebrow">an experiment in duality</p>
+
+    <h1>
+      <span class="good">good</span><span class="slash">/</span><span class="evil">evil</span>
+      <br />.club
+    </h1>
+
+    <p class="tagline">Pick a side, or hold the balance. The page changes with you.</p>
+
+    <div class="picker" role="group" aria-label="Choose your alignment">
+      <button class="btn" data-pick="good">😇 Good</button>
+      <button class="btn" data-pick="balance">☯ Balance</button>
+      <button class="btn" data-pick="evil">😈 Evil</button>
+    </div>
+
+    <p class="verdict" id="verdict" aria-live="polite">Undecided. Smart.</p>
+  </main>
+
+  <footer>
+    a corner of <a href="https://www.untra.studio" target="_blank" rel="noopener">untra.studio</a> · 2026
+  </footer>
+
+  <script>
+    (function () {
+      var html = document.documentElement;
+      var verdict = document.getElementById('verdict');
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('.btn'));
+
+      var lines = {
+        good:    'Aligned with the light. Suspiciously wholesome.',
+        evil:    'Welcome to the dark side. We do have cookies.',
+        balance: 'Both, neither, all of it. The grown-up answer.'
+      };
+
+      function setSide(side) {
+        html.setAttribute('data-side', side);
+        verdict.textContent = lines[side] || 'Undecided. Smart.';
+        buttons.forEach(function (b) {
+          b.classList.toggle('active', b.dataset.pick === side);
+        });
+        try { localStorage.setItem('goodevil-side', side); } catch (e) {}
+      }
+
+      buttons.forEach(function (b) {
+        b.addEventListener('click', function () { setSide(b.dataset.pick); });
+      });
+
+      // Restore last choice
+      try {
+        var saved = localStorage.getItem('goodevil-side');
+        if (saved && lines[saved]) setSide(saved);
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>
