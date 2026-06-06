@@ -1,243 +1,633 @@
 <!DOCTYPE html>
-<html lang="en" data-side="balance">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>goodevil.club — pick a side, or don't</title>
-  <meta name="description" content="goodevil.club — a small experiment in duality. Good, evil, and everything balanced in between." />
-  <meta name="theme-color" content="#0e0e12" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Good Evil Club — Fragments of the Future</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,600&family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0c0b08;
+    --paper: #f2ede6;
+    --surface: #141210;
+    --surface2: #1c1a16;
+    --gold: #b8966a;
+    --gold-dim: #7a6042;
+    --dim: #5a5448;
+    --muted: rgba(242,237,230,0.18);
+    --muted2: rgba(242,237,230,0.06);
+    --rule: rgba(242,237,230,0.08);
+    --text: #d8d0c4;
+    --text-dim: rgba(216,208,196,0.45);
+  }
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="goodevil.club" />
-  <meta property="og:description" content="Pick a side, or don't. A small experiment in duality." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://goodevil.club" />
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
 
-  <style>
-    :root {
-      --bg: #0e0e12;
-      --fg: #f4f4f6;
-      --muted: #9a9aa8;
-      --good: #6ee7b7;
-      --good-deep: #059669;
-      --evil: #fb7185;
-      --evil-deep: #be123c;
-      --line: rgba(255, 255, 255, 0.08);
-      --accent: var(--fg);
-      --halo-1: var(--good);
-      --halo-2: var(--evil);
-      --transition: 600ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
 
-    /* Side themes ---------------------------------------------------- */
-    html[data-side="good"] {
-      --bg: #061914;
-      --fg: #eafff6;
-      --muted: #8fd9be;
-      --accent: var(--good);
-      --halo-1: var(--good);
-      --halo-2: var(--good-deep);
-    }
-    html[data-side="evil"] {
-      --bg: #190608;
-      --fg: #ffeef0;
-      --muted: #e09aa4;
-      --accent: var(--evil);
-      --halo-1: var(--evil);
-      --halo-2: var(--evil-deep);
-    }
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── CURSOR ── */
+  .cursor {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: width 0.2s, height 0.2s, opacity 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor.expanded { width: 36px; height: 36px; opacity: 0.25; }
 
-    html, body { height: 100%; }
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 48px;
+    border-bottom: 0.5px solid var(--rule);
+    background: rgba(12,11,8,0.9);
+    backdrop-filter: blur(16px);
+  }
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; font-weight: 300;
+    letter-spacing: 0.04em; color: var(--text);
+    cursor: pointer;
+  }
+  .nav-logo em { font-style: italic; color: var(--gold); }
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--text-dim); text-decoration: none; transition: color 0.2s;
+    cursor: pointer;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active-link { color: var(--gold); }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      transition: background var(--transition), color var(--transition);
-      overflow-x: hidden;
-    }
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding-top: 80px;
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .hero-left {
+    padding: 80px 48px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-right: 0.5px solid var(--rule);
+    animation: fadeUp 1s ease both;
+  }
+  .hero-eyebrow {
+    font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--text-dim); display: flex; align-items: center; gap: 16px;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: block; width: 32px; height: 0.5px; background: var(--gold);
+  }
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(64px, 8vw, 110px);
+    font-weight: 300; line-height: 0.92; letter-spacing: -0.02em;
+  }
+  .hero-title em { font-style: italic; color: var(--gold); display: block; }
+  .hero-title strong { font-weight: 600; display: block; color: var(--text); }
+  .hero-bottom { display: flex; flex-direction: column; gap: 32px; }
+  .hero-tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-style: italic; font-weight: 300;
+    color: var(--text-dim); line-height: 1.5; max-width: 380px;
+  }
+  .hero-meta { display: flex; gap: 40px; }
+  .hero-meta-item { display: flex; flex-direction: column; gap: 4px; }
+  .hero-meta-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .hero-meta-val { font-size: 13px; color: var(--text); }
 
-    /* Animated dual halo backdrop ----------------------------------- */
-    .backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      overflow: hidden;
-      pointer-events: none;
-    }
-    .halo {
-      position: absolute;
-      width: 60vmax;
-      height: 60vmax;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.35;
-      transition: background var(--transition), opacity var(--transition);
-      animation: drift 22s ease-in-out infinite alternate;
-    }
-    .halo.one { background: var(--halo-1); top: -20vmax; left: -10vmax; }
-    .halo.two { background: var(--halo-2); bottom: -20vmax; right: -10vmax; animation-delay: -11s; }
+  .hero-right { position: relative; overflow: hidden; animation: fadeUp 1s ease 0.2s both; }
+  .hero-visual {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .compass-ring {
+    position: absolute; border-radius: 50%;
+    border: 0.5px solid var(--rule);
+  }
+  .cr1 { width: 480px; height: 480px; animation: spinSlow 120s linear infinite; }
+  .cr2 { width: 360px; height: 360px; animation: spinSlow 80s linear infinite reverse; }
+  .cr3 { width: 240px; height: 240px; animation: spinSlow 60s linear infinite; }
+  .compass-center {
+    width: 120px; height: 120px;
+    border: 0.5px solid var(--gold-dim);
+    border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; position: relative; z-index: 2;
+  }
+  .compass-label { font-family: 'Cormorant Garamond', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
+  .compass-label.big { font-size: 22px; font-style: italic; font-weight: 300; }
+  .compass-tick {
+    position: absolute; width: 0.5px;
+    background: rgba(242,237,230,0.07);
+    left: 50%; transform-origin: bottom center;
+  }
 
-    @keyframes drift {
-      from { transform: translate(0, 0) scale(1); }
-      to   { transform: translate(8vmax, 6vmax) scale(1.15); }
-    }
+  /* ── MARQUEE ── */
+  .marquee-bar { background: var(--surface2); overflow: hidden; padding: 14px 0; display: flex; border-bottom: 0.5px solid var(--rule); }
+  .marquee-track { display: flex; gap: 0; white-space: nowrap; animation: marquee 30s linear infinite; }
+  .marquee-item { display: flex; align-items: center; gap: 48px; padding-right: 48px; }
+  .marquee-item span {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px; font-style: italic;
+    color: rgba(216,208,196,0.25); letter-spacing: 0.05em;
+  }
+  .marquee-item .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gold-dim); flex-shrink: 0; }
 
-    /* Layout -------------------------------------------------------- */
-    main {
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 6vh 24px;
-      gap: 2.2rem;
-    }
+  /* ── SECTION HEADER ── */
+  .section-header {
+    padding: 60px 48px 40px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .section-kicker { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300; line-height: 1; letter-spacing: -0.01em; color: var(--text); }
+  .section-title em { font-style: italic; color: var(--gold); }
+  .section-count { font-family: 'Cormorant Garamond', serif; font-size: 80px; font-weight: 300; color: rgba(242,237,230,0.04); line-height: 1; letter-spacing: -0.04em; }
 
-    .eyebrow {
-      font-size: 0.8rem;
-      letter-spacing: 0.32em;
-      text-transform: uppercase;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
+  /* ── APP CARDS ── */
+  .apps-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .app-card {
+    border-bottom: 0.5px solid var(--rule);
+    border-right: 0.5px solid var(--rule);
+    position: relative; overflow: hidden;
+    transition: background 0.4s ease;
+    animation: fadeUp 0.8s ease both;
+  }
+  .app-card:nth-child(2n) { border-right: none; }
+  .app-card:not(.coming-soon):hover { background: var(--surface2); }
+  .app-card-inner { padding: 48px; position: relative; z-index: 2; }
+  .app-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .app-num { font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); }
+  .app-author { display: flex; align-items: center; gap: 8px; }
+  .app-author-symbol {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 0.5px solid var(--gold-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px; font-style: italic; color: var(--gold);
+  }
+  .app-author-name { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .app-title { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; line-height: 1.1; margin-bottom: 16px; color: var(--text); }
+  .app-title em { font-style: italic; color: var(--gold); }
+  .app-thesis { font-size: 12px; line-height: 1.8; color: var(--text-dim); max-width: 340px; margin-bottom: 40px; }
+  .app-footer { display: flex; justify-content: space-between; align-items: center; }
+  .app-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .app-tag { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; border: 0.5px solid var(--rule); padding: 4px 10px; color: var(--text-dim); }
+  .app-link { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); text-decoration: none; display: flex; align-items: center; gap: 8px; transition: gap 0.2s; }
+  .app-link::after { content: '→'; font-size: 14px; }
+  .app-link:hover { gap: 12px; }
+  .app-card.coming-soon { opacity: 0.4; }
+  .coming-badge { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; border: 0.5px solid var(--gold-dim); color: var(--gold-dim); padding: 3px 10px; display: inline-block; margin-bottom: 16px; }
 
-    h1 {
-      font-size: clamp(2.8rem, 11vw, 7rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 0.95;
-    }
-    h1 .good { color: var(--good); }
-    h1 .evil { color: var(--evil); }
-    h1 .slash { color: var(--muted); font-weight: 300; }
+  /* ── MANIFESTO ── */
+  .manifesto {
+    background: var(--surface);
+    padding: 100px 48px; text-align: center;
+    border-top: 0.5px solid var(--rule);
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .manifesto-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(24px, 3.5vw, 48px);
+    font-weight: 300; font-style: italic;
+    color: var(--text); line-height: 1.35;
+    max-width: 800px; margin: 0 auto 40px;
+    letter-spacing: -0.01em;
+  }
+  .manifesto-quote em { color: var(--gold); font-style: normal; }
+  .manifesto-attr { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); }
 
-    .tagline {
-      max-width: 30ch;
-      color: var(--muted);
-      font-size: clamp(1rem, 2.5vw, 1.25rem);
-      transition: color var(--transition);
-    }
+  /* ── ABOUT PAGE ── */
+  .about-hero {
+    min-height: 60vh;
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding-top: 80px;
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .about-hero-left {
+    padding: 80px 48px;
+    border-right: 0.5px solid var(--rule);
+    display: flex; flex-direction: column; justify-content: space-between;
+    animation: fadeUp 0.8s ease both;
+  }
+  .about-hero-right {
+    padding: 80px 48px;
+    animation: fadeUp 0.8s ease 0.15s both;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .about-big-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(52px, 7vw, 96px);
+    font-weight: 300; line-height: 0.92; letter-spacing: -0.02em; color: var(--text);
+  }
+  .about-big-title em { font-style: italic; color: var(--gold); display: block; }
+  .about-body { font-size: 13px; line-height: 1.95; color: var(--text-dim); max-width: 420px; }
+  .about-body p + p { margin-top: 20px; }
 
-    /* Side picker --------------------------------------------------- */
-    .picker {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .btn {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--fg);
-      font: inherit;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 0.85rem 1.6rem;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: transform 150ms ease, border-color 200ms ease, background 200ms ease;
-      backdrop-filter: blur(6px);
-    }
-    .btn:hover { transform: translateY(-2px); }
-    .btn:active { transform: translateY(0); }
-    .btn[data-pick="good"]:hover { border-color: var(--good); color: var(--good); }
-    .btn[data-pick="evil"]:hover { border-color: var(--evil); color: var(--evil); }
-    .btn[data-pick="balance"]:hover { border-color: var(--fg); }
-    .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  /* ── CARTOGRAPHERS ── */
+  .cartographers-section { border-bottom: 0.5px solid var(--rule); }
+  .cart-header {
+    padding: 60px 48px 48px;
+    border-bottom: 0.5px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .cart-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .cart-card {
+    padding: 52px 40px;
+    border-right: 0.5px solid var(--rule);
+    transition: background 0.3s;
+    animation: fadeUp 0.8s ease both;
+  }
+  .cart-card:last-child { border-right: none; }
+  .cart-card:hover { background: var(--surface2); }
+  .cart-initial {
+    width: 64px; height: 64px;
+    border: 0.5px solid var(--gold-dim);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-style: italic; color: var(--gold);
+    margin-bottom: 32px;
+  }
+  .cart-pseudonym {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px; font-weight: 300; font-style: italic;
+    color: var(--text); margin-bottom: 6px; line-height: 1;
+  }
+  .cart-role { font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 24px; }
+  .cart-meaning { font-size: 12px; line-height: 1.85; color: var(--text-dim); margin-bottom: 24px; }
+  .cart-etymology {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px; font-style: italic; color: var(--text-dim);
+    border-top: 0.5px solid var(--rule); padding-top: 20px;
+    line-height: 1.6;
+  }
+  .cart-etymology strong { font-style: normal; color: var(--gold-dim); font-weight: 400; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
 
-    .verdict {
-      min-height: 1.5em;
-      font-size: 0.95rem;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
+  .cart-card:nth-child(1) { animation-delay: 0s; }
+  .cart-card:nth-child(2) { animation-delay: 0.1s; }
+  .cart-card:nth-child(3) { animation-delay: 0.2s; }
 
-    footer {
-      position: fixed;
-      bottom: 18px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 0.78rem;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
-    footer a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); }
-    footer a:hover { color: var(--fg); }
+  /* ── FOOTER ── */
+  footer {
+    padding: 36px 48px;
+    border-top: 0.5px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--surface);
+  }
+  .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 300; letter-spacing: 0.04em; color: var(--text); }
+  .footer-logo em { font-style: italic; color: var(--gold); }
+  .footer-links { display: flex; gap: 32px; }
+  .footer-links a { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); text-decoration: none; transition: color 0.2s; cursor: pointer; }
+  .footer-links a:hover { color: var(--text); }
+  .footer-mail { font-size: 10px; letter-spacing: 0.05em; color: var(--gold-dim); text-decoration: none; transition: color 0.2s; }
+  .footer-mail:hover { color: var(--gold); }
 
-    @media (prefers-reduced-motion: reduce) {
-      .halo { animation: none; }
-      * { transition-duration: 1ms !important; }
-    }
-  </style>
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spinSlow { to { transform: rotate(360deg); } }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .app-card:nth-child(1) { animation-delay: 0s; }
+  .app-card:nth-child(2) { animation-delay: 0.1s; }
+  .app-card:nth-child(3) { animation-delay: 0.2s; }
+  .app-card:nth-child(4) { animation-delay: 0.3s; }
+</style>
 </head>
 <body>
-  <div class="backdrop" aria-hidden="true">
-    <div class="halo one"></div>
-    <div class="halo two"></div>
+
+<div class="cursor" id="cursor"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">Good <em>Evil</em> Club</div>
+  <ul class="nav-links">
+    <li><a onclick="showPage('home')" id="nav-home" class="active-link">Applications</a></li>
+    <li><a onclick="showPage('about')" id="nav-about">About</a></li>
+  </ul>
+</nav>
+
+<!-- ════════════════════════════════════════
+     PAGE: HOME
+════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Think-and-do tank · Stockholm</div>
+      <h1 class="hero-title">
+        <em>Good</em>
+        <strong>Evil</strong>
+        <span style="font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--text);">Club</span>
+      </h1>
+      <div class="hero-bottom">
+        <p class="hero-tagline">We build mini-applications that explore fragments of the future — one provocation at a time.</p>
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">Cartographers</span>
+            <span class="hero-meta-val">Meridian · Cipher · Fulcrum</span>
+          </div>
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">Status</span>
+            <span class="hero-meta-val">Actively building</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-visual">
+        <div class="compass-ring cr1" id="cr1"></div>
+        <div class="compass-ring cr2"></div>
+        <div class="compass-ring cr3"></div>
+        <div class="compass-center">
+          <span class="compass-label">G·E</span>
+          <span class="compass-label big">✦</span>
+          <span class="compass-label">Club</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee-bar">
+    <div class="marquee-track">
+      <div class="marquee-item">
+        <span>Fragments of the future</span><div class="dot"></div>
+        <span>AI-powered mini-applications</span><div class="dot"></div>
+        <span>Meridian</span><div class="dot"></div>
+        <span>Cipher</span><div class="dot"></div>
+        <span>Fulcrum</span><div class="dot"></div>
+        <span>goodevil.club</span><div class="dot"></div>
+        <span>Think and do</span><div class="dot"></div>
+      </div>
+      <div class="marquee-item" aria-hidden="true">
+        <span>Fragments of the future</span><div class="dot"></div>
+        <span>AI-powered mini-applications</span><div class="dot"></div>
+        <span>Meridian</span><div class="dot"></div>
+        <span>Cipher</span><div class="dot"></div>
+        <span>Fulcrum</span><div class="dot"></div>
+        <span>goodevil.club</span><div class="dot"></div>
+        <span>Think and do</span><div class="dot"></div>
+      </div>
+    </div>
   </div>
 
-  <main>
-    <p class="eyebrow">an experiment in duality</p>
-
-    <h1>
-      <span class="good">good</span><span class="slash">/</span><span class="evil">evil</span>
-      <br />.club
-    </h1>
-
-    <p class="tagline">Pick a side, or hold the balance. The page changes with you.</p>
-
-    <div class="picker" role="group" aria-label="Choose your alignment">
-      <button class="btn" data-pick="good">😇 Good</button>
-      <button class="btn" data-pick="balance">☯ Balance</button>
-      <button class="btn" data-pick="evil">😈 Evil</button>
+  <!-- APPS -->
+  <section id="apps">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Portfolio</p>
+        <h2 class="section-title">Mini-<em>applications</em></h2>
+      </div>
+      <span class="section-count">04</span>
     </div>
+    <div class="apps-grid">
 
-    <p class="verdict" id="verdict" aria-live="polite">Undecided. Smart.</p>
-  </main>
+      <div class="app-card">
+        <div class="app-card-inner">
+          <div class="app-card-top">
+            <span class="app-num">01</span>
+            <div class="app-author">
+              <div class="app-author-symbol">M</div>
+              <span class="app-author-name">Meridian</span>
+            </div>
+          </div>
+          <h3 class="app-title">Business Model<br><em>Stress-Test</em></h3>
+          <p class="app-thesis">What if you could pressure-test any business model against 10 near-future scenarios in 60 seconds? This app surfaces strategic blind spots before they become existential risks.</p>
+          <div class="app-footer">
+            <div class="app-tags"><span class="app-tag">Strategy</span><span class="app-tag">AI</span></div>
+            <a href="#" class="app-link">Launch app</a>
+          </div>
+        </div>
+      </div>
 
+      <div class="app-card">
+        <div class="app-card-inner">
+          <div class="app-card-top">
+            <span class="app-num">02</span>
+            <div class="app-author">
+              <div class="app-author-symbol">C</div>
+              <span class="app-author-name">Cipher</span>
+            </div>
+          </div>
+          <h3 class="app-title">Complexity<br><em>Decoder</em></h3>
+          <p class="app-thesis">Paste any organizational structure, process document, or system description. Watch AI reveal the hidden dependencies, bottlenecks, and failure points that everyone pretends aren't there.</p>
+          <div class="app-footer">
+            <div class="app-tags"><span class="app-tag">Systems</span><span class="app-tag">Analysis</span></div>
+            <a href="#" class="app-link">Launch app</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card coming-soon">
+        <div class="app-card-inner">
+          <div class="app-card-top">
+            <span class="app-num">03</span>
+            <div class="app-author">
+              <div class="app-author-symbol">F</div>
+              <span class="app-author-name">Fulcrum</span>
+            </div>
+          </div>
+          <span class="coming-badge">In development</span>
+          <h3 class="app-title">Transformation<br><em>Scenario Planner</em></h3>
+          <p class="app-thesis">Large organizations don't fail to transform because they lack vision. They fail because they can't see which lever to pull first. This app finds the fulcrum.</p>
+          <div class="app-footer">
+            <div class="app-tags"><span class="app-tag">Enterprise</span><span class="app-tag">Architecture</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card coming-soon">
+        <div class="app-card-inner">
+          <div class="app-card-top">
+            <span class="app-num">04</span>
+            <div class="app-author">
+              <div class="app-author-symbol">M</div>
+              <span class="app-author-name">Meridian</span>
+            </div>
+          </div>
+          <span class="coming-badge">In development</span>
+          <h3 class="app-title">Value Chain<br><em>Re-mapper</em></h3>
+          <p class="app-thesis">When AI can perform every step in a value chain, which steps still matter? This app forces the uncomfortable question and maps what comes next.</p>
+          <div class="app-footer">
+            <div class="app-tags"><span class="app-tag">Business Design</span><span class="app-tag">AI</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MANIFESTO -->
+  <div class="manifesto">
+    <p class="manifesto-quote">"Every app is a <em>provocation</em> — not a product. A question dressed as a tool. We build them to see what the future feels like before it arrives."</p>
+    <span class="manifesto-attr">Good Evil Club · Development Charter · v1.0</span>
+  </div>
+
+  <!-- FOOTER -->
   <footer>
-    a corner of <a href="https://www.untra.studio" target="_blank" rel="noopener">untra.studio</a> · 2026
+    <div class="footer-logo">Good <em>Evil</em> Club</div>
+    <div class="footer-links">
+      <a onclick="showPage('home')">Applications</a>
+      <a onclick="showPage('about')">About</a>
+      <a href="https://medium.com" target="_blank">Medium</a>
+    </div>
+    <a href="mailto:signal@goodevil.club" class="footer-mail">signal@goodevil.club</a>
   </footer>
 
-  <script>
-    (function () {
-      var html = document.documentElement;
-      var verdict = document.getElementById('verdict');
-      var buttons = Array.prototype.slice.call(document.querySelectorAll('.btn'));
+</div><!-- /page-home -->
 
-      var lines = {
-        good:    'Aligned with the light. Suspiciously wholesome.',
-        evil:    'Welcome to the dark side. We do have cookies.',
-        balance: 'Both, neither, all of it. The grown-up answer.'
-      };
 
-      function setSide(side) {
-        html.setAttribute('data-side', side);
-        verdict.textContent = lines[side] || 'Undecided. Smart.';
-        buttons.forEach(function (b) {
-          b.classList.toggle('active', b.dataset.pick === side);
-        });
-        try { localStorage.setItem('goodevil-side', side); } catch (e) {}
-      }
+<!-- ════════════════════════════════════════
+     PAGE: ABOUT
+════════════════════════════════════════ -->
+<div class="page" id="page-about">
 
-      buttons.forEach(function (b) {
-        b.addEventListener('click', function () { setSide(b.dataset.pick); });
-      });
+  <!-- HERO -->
+  <section class="about-hero">
+    <div class="about-hero-left">
+      <div class="hero-eyebrow">Think-and-do tank · Stockholm</div>
+      <h1 class="about-big-title">
+        About<br>
+        <em>the Club</em>
+      </h1>
+    </div>
+    <div class="about-hero-right">
+      <div class="about-body">
+        <p>Good Evil Club is a studio of three practitioners who believe that the most useful thing you can do with a new technology is to build something that asks a hard question with it.</p>
+        <p>We live in the tension between analysis and action — between the good and the evil of every new capability. Each mini-application is a published artifact: code, argument, and article released simultaneously.</p>
+        <p>We write under cartographic pseudonyms — instruments of measurement and navigation — because that is what we are trying to do: chart unfamiliar territory before others realize it exists.</p>
+      </div>
+    </div>
+  </section>
 
-      // Restore last choice
-      try {
-        var saved = localStorage.getItem('goodevil-side');
-        if (saved && lines[saved]) setSide(saved);
-      } catch (e) {}
-    })();
-  </script>
+  <!-- CARTOGRAPHERS -->
+  <section class="cartographers-section">
+    <div class="cart-header">
+      <div>
+        <p class="section-kicker">The team</p>
+        <h2 class="section-title">The <em>Cartographers</em></h2>
+      </div>
+    </div>
+    <div class="cart-grid">
+
+      <div class="cart-card">
+        <div class="cart-initial">M</div>
+        <div class="cart-pseudonym">Meridian</div>
+        <div class="cart-role">Business Designer</div>
+        <p class="cart-meaning">Meridian frames value, maps opportunity, and finds the zero-point in every business challenge. Where others see markets, Meridian sees coordinates — and the lines that connect them.</p>
+        <div class="cart-etymology">
+          <strong>Cartographic origin</strong>
+          The prime meridian — the reference line from which all longitude is measured. Zero degrees. The origin of every map ever drawn.
+        </div>
+      </div>
+
+      <div class="cart-card">
+        <div class="cart-initial">C</div>
+        <div class="cart-pseudonym">Cipher</div>
+        <div class="cart-role">System Designer</div>
+        <p class="cart-meaning">Cipher reads the patterns in complexity that appear as noise to everyone else. Systems, organizations, processes — all become legible when viewed through the right lens.</p>
+        <div class="cart-etymology">
+          <strong>Cartographic origin</strong>
+          In navigation, cipher denotes zero — the null point, the datum. Also: a code. The one who decodes what others cannot read.
+        </div>
+      </div>
+
+      <div class="cart-card">
+        <div class="cart-initial">F</div>
+        <div class="cart-pseudonym">Fulcrum</div>
+        <div class="cart-role">Enterprise Architect</div>
+        <p class="cart-meaning">Fulcrum finds the structural hinge in large systems. In organizations that feel impossible to move, there is always one point where minimal force produces maximum change.</p>
+        <div class="cart-etymology">
+          <strong>Cartographic origin</strong>
+          The fulcrum is the pivot point of a lever — the place where force becomes leverage. Move the fulcrum and you change the entire system.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MANIFESTO -->
+  <div class="manifesto">
+    <p class="manifesto-quote">"We don't predict the future. We <em>probe</em> it — building small things that make it briefly, uncomfortably visible."</p>
+    <span class="manifesto-attr">Good Evil Club · About</span>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Good <em>Evil</em> Club</div>
+    <div class="footer-links">
+      <a onclick="showPage('home')">Applications</a>
+      <a onclick="showPage('about')">About</a>
+      <a href="https://medium.com" target="_blank">Medium</a>
+    </div>
+    <a href="mailto:signal@goodevil.club" class="footer-mail">signal@goodevil.club</a>
+  </footer>
+
+</div><!-- /page-about -->
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button, .app-card, .cart-card, .nav-logo').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('expanded'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('expanded'));
+  });
+
+  // Page switching
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active-link'));
+    const activeNav = document.getElementById('nav-' + name);
+    if (activeNav) activeNav.classList.add('active-link');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Compass tick marks
+  const ring = document.getElementById('cr1');
+  for (let i = 0; i < 36; i++) {
+    const tick = document.createElement('div');
+    tick.className = 'compass-tick';
+    tick.style.height = i % 9 === 0 ? '20px' : '8px';
+    tick.style.top = i % 9 === 0 ? '-20px' : '-8px';
+    tick.style.left = '50%';
+    tick.style.transform = `rotate(${i * 10}deg)`;
+    ring.appendChild(tick);
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.style.animationPlayState = 'running'; });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.app-card, .cart-card, .about-hero-left, .about-hero-right').forEach(el => {
+    el.style.animationPlayState = 'paused';
+    observer.observe(el);
+  });
+</script>
 </body>
 </html>
