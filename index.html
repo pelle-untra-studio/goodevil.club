@@ -440,16 +440,9 @@ body.panel-open {
 
 /* semi-transparent backdrop — sits over the right grid only */
 #probe-panel-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  z-index: 499;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 300ms ease;
-  height: 220px;
-  top: var(--nav-h);
-  bottom: auto;
+  /* removed: this 220px semi-transparent band sat on top of .pp-hero
+     and created a dark horizontal seam across the gradient */
+  display: none;
 }
 #probe-panel.open ~ * { pointer-events: none; }
 body.panel-open #probe-panel-bg {
@@ -562,9 +555,9 @@ p.pp-section-label,
 }
 .pp-btn-primary:hover { }
 .pp-btn-secondary {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 1px solid #ffffff;
 }
 .pp-btn-secondary:hover { }
 
@@ -609,9 +602,41 @@ p.pp-section-label,
 .pp-hero.f11 { background: linear-gradient(135deg, #4a1a2a, #1a0810); }
 .pp-hero.f12 { background: linear-gradient(135deg, #2a3a1a, #0d1208); }
 
-/* mobile: full screen */
+/* mobile: stack the split layout into a single scrolling column */
 @media (max-width: 768px) {
-  #probe-panel { width: 100%; }
+  html, body { height: auto; overflow-y: auto; cursor: auto; }
+  #cur { display: none; }
+
+  #home { flex-direction: column; height: auto; }
+
+  #left {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 32px 24px 40px;
+    overflow: visible;
+  }
+  .about-h { margin-bottom: 28px; }
+  .about-stats { margin-bottom: 0; }
+
+  #right {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* full-screen panel on mobile */
+  #probe-panel {
+    width: 100%;
+    top: 0;
+    height: 100vh;
+  }
+  .pp-hero { height: 160px; }
+
+  /* keep content clear of the floating nav pill */
+  .probes-grid { padding-bottom: 96px; }
+  #contact-inner { padding-bottom: 120px; }
 }
 
 /* Nav pill buttons */
@@ -647,16 +672,15 @@ p.pp-section-label,
   border-color: #35D0F2 !important;
 }
 
-/* Read the dispatch — secondary button */
+/* inverted secondary button — solid white, dark text */
 .pp-btn-secondary {
   cursor: pointer;
-  transition: color .2s ease, border-bottom .2s ease;
-  border-bottom: 1px solid transparent;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
 }
 .pp-btn-secondary:hover {
-  color: #ffffff !important;
-  border-bottom: 1px solid #ffffff;
-  border-color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.82) !important;
+  color: #0a0a0a !important;
+  border-color: rgba(255,255,255,.82) !important;
 }
 #probe-panel-inner {
   --muted: #ffffff;
@@ -671,7 +695,7 @@ p.pp-section-label,
 #probe-panel-inner .pp-builder strong { color: rgba(255,255,255,1) !important; }
 #probe-panel-inner .pp-tag           { color: rgba(255,255,255,0.75) !important; }
 #probe-panel-inner .pp-year          { color: rgba(255,255,255,0.4) !important; }
-#probe-panel-inner .pp-btn-secondary { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-btn-secondary { color: #0a0a0a !important; }
 #probe-panel-inner .pp-close         { color: rgba(255,255,255,0.5) !important; }
 </style>
 </head>
