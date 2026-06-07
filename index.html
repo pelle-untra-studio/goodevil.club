@@ -3,631 +3,1089 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Good Evil Club — Fragments of the Future</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,600&family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<title>Good Evil Club</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink: #0c0b08;
-    --paper: #f2ede6;
-    --surface: #141210;
-    --surface2: #1c1a16;
-    --gold: #b8966a;
-    --gold-dim: #7a6042;
-    --dim: #5a5448;
-    --muted: rgba(242,237,230,0.18);
-    --muted2: rgba(242,237,230,0.06);
-    --rule: rgba(242,237,230,0.08);
-    --text: #d8d0c4;
-    --text-dim: rgba(216,208,196,0.45);
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-size: 16px; scroll-behavior: smooth; }
+:root {
+  --bg: #0a0a0a;
+  --fg: #ffffff;
+  --muted: rgba(255,255,255,0.36);
+  --border: rgba(255,255,255,0.1);
+  --nav-h: 67px;
+}
 
-  body {
-    background: var(--ink);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-weight: 300;
-    overflow-x: hidden;
-    cursor: crosshair;
-  }
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Syne', sans-serif;
+  height: 100vh;
+  overflow-x: hidden;
+  cursor: none;
+}
 
-  /* ── PAGES ── */
-  .page { display: none; }
-  .page.active { display: block; }
+/* ── CURSOR ── */
+#cur {
+  width: 9px; height: 9px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width .22s cubic-bezier(.16,1,.3,1), height .22s cubic-bezier(.16,1,.3,1);
+}
+#cur.big { width: 52px; height: 52px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); }
 
-  /* ── CURSOR ── */
-  .cursor {
-    width: 8px; height: 8px;
-    background: var(--gold);
-    border-radius: 50%;
-    position: fixed; top: 0; left: 0;
-    pointer-events: none; z-index: 9999;
-    transform: translate(-50%,-50%);
-    transition: width 0.2s, height 0.2s, opacity 0.2s;
-    mix-blend-mode: screen;
-  }
-  .cursor.expanded { width: 36px; height: 36px; opacity: 0.25; }
+/* ── TOP BAR ── */
+header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  z-index: 300;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
 
-  /* ── NAV ── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 22px 48px;
-    border-bottom: 0.5px solid var(--rule);
-    background: rgba(12,11,8,0.9);
-    backdrop-filter: blur(16px);
-  }
-  .nav-logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px; font-weight: 300;
-    letter-spacing: 0.04em; color: var(--text);
-    cursor: pointer;
-  }
-  .nav-logo em { font-style: italic; color: var(--gold); }
-  .nav-links { display: flex; gap: 36px; list-style: none; }
-  .nav-links a {
-    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--text-dim); text-decoration: none; transition: color 0.2s;
-    cursor: pointer;
-  }
-  .nav-links a:hover { color: var(--text); }
-  .nav-links a.active-link { color: var(--gold); }
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--fg); text-decoration: none; line-height: 1;
+}
+.logo small {
+  display: block;
+  font-size: 11px; font-weight: 400;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-top: 4px;
+}
 
-  /* ── HERO ── */
-  .hero {
-    min-height: 100vh;
-    display: grid; grid-template-columns: 1fr 1fr;
-    padding-top: 80px;
-    border-bottom: 0.5px solid var(--rule);
-  }
-  .hero-left {
-    padding: 80px 48px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    border-right: 0.5px solid var(--rule);
-    animation: fadeUp 1s ease both;
-  }
-  .hero-eyebrow {
-    font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
-    color: var(--text-dim); display: flex; align-items: center; gap: 16px;
-  }
-  .hero-eyebrow::before {
-    content: ''; display: block; width: 32px; height: 0.5px; background: var(--gold);
-  }
-  .hero-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(64px, 8vw, 110px);
-    font-weight: 300; line-height: 0.92; letter-spacing: -0.02em;
-  }
-  .hero-title em { font-style: italic; color: var(--gold); display: block; }
-  .hero-title strong { font-weight: 600; display: block; color: var(--text); }
-  .hero-bottom { display: flex; flex-direction: column; gap: 32px; }
-  .hero-tagline {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 20px; font-style: italic; font-weight: 300;
-    color: var(--text-dim); line-height: 1.5; max-width: 380px;
-  }
-  .hero-meta { display: flex; gap: 40px; }
-  .hero-meta-item { display: flex; flex-direction: column; gap: 4px; }
-  .hero-meta-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
-  .hero-meta-val { font-size: 13px; color: var(--text); }
+.header-center {
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); text-align: center; line-height: 1.5;
+}
 
-  .hero-right { position: relative; overflow: hidden; animation: fadeUp 1s ease 0.2s both; }
-  .hero-visual {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .compass-ring {
-    position: absolute; border-radius: 50%;
-    border: 0.5px solid var(--rule);
-  }
-  .cr1 { width: 480px; height: 480px; animation: spinSlow 120s linear infinite; }
-  .cr2 { width: 360px; height: 360px; animation: spinSlow 80s linear infinite reverse; }
-  .cr3 { width: 240px; height: 240px; animation: spinSlow 60s linear infinite; }
-  .compass-center {
-    width: 120px; height: 120px;
-    border: 0.5px solid var(--gold-dim);
-    border-radius: 50%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; position: relative; z-index: 2;
-  }
-  .compass-label { font-family: 'Cormorant Garamond', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
-  .compass-label.big { font-size: 22px; font-style: italic; font-weight: 300; }
-  .compass-tick {
-    position: absolute; width: 0.5px;
-    background: rgba(242,237,230,0.07);
-    left: 50%; transform-origin: bottom center;
-  }
+.header-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.header-right span {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px; color: var(--muted); letter-spacing: .04em;
+}
 
-  /* ── MARQUEE ── */
-  .marquee-bar { background: var(--surface2); overflow: hidden; padding: 14px 0; display: flex; border-bottom: 0.5px solid var(--rule); }
-  .marquee-track { display: flex; gap: 0; white-space: nowrap; animation: marquee 30s linear infinite; }
-  .marquee-item { display: flex; align-items: center; gap: 48px; padding-right: 48px; }
-  .marquee-item span {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 14px; font-style: italic;
-    color: rgba(216,208,196,0.25); letter-spacing: 0.05em;
-  }
-  .marquee-item .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gold-dim); flex-shrink: 0; }
+/* ── SPLIT LAYOUT ── */
+#home {
+  display: flex;
+  height: 100vh;
+  padding-top: var(--nav-h);
+}
 
-  /* ── SECTION HEADER ── */
-  .section-header {
-    padding: 60px 48px 40px;
-    display: flex; justify-content: space-between; align-items: flex-end;
-    border-bottom: 0.5px solid var(--rule);
-  }
-  .section-kicker { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
-  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300; line-height: 1; letter-spacing: -0.01em; color: var(--text); }
-  .section-title em { font-style: italic; color: var(--gold); }
-  .section-count { font-family: 'Cormorant Garamond', serif; font-size: 80px; font-weight: 300; color: rgba(242,237,230,0.04); line-height: 1; letter-spacing: -0.04em; }
+/* LEFT — about, fixed, non-scrolling */
+#left {
+  width: 50%;
+  flex-shrink: 0;
+  height: calc(100vh - var(--nav-h));
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 56px 48px 32px;
+  overflow: hidden;
+}
 
-  /* ── APP CARDS ── */
-  .apps-grid { display: grid; grid-template-columns: 1fr 1fr; }
-  .app-card {
-    border-bottom: 0.5px solid var(--rule);
-    border-right: 0.5px solid var(--rule);
-    position: relative; overflow: hidden;
-    transition: background 0.4s ease;
-    animation: fadeUp 0.8s ease both;
-  }
-  .app-card:nth-child(2n) { border-right: none; }
-  .app-card:not(.coming-soon):hover { background: var(--surface2); }
-  .app-card-inner { padding: 48px; position: relative; z-index: 2; }
-  .app-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-  .app-num { font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); }
-  .app-author { display: flex; align-items: center; gap: 8px; }
-  .app-author-symbol {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 0.5px solid var(--gold-dim);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 13px; font-style: italic; color: var(--gold);
-  }
-  .app-author-name { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
-  .app-title { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; line-height: 1.1; margin-bottom: 16px; color: var(--text); }
-  .app-title em { font-style: italic; color: var(--gold); }
-  .app-thesis { font-size: 12px; line-height: 1.8; color: var(--text-dim); max-width: 340px; margin-bottom: 40px; }
-  .app-footer { display: flex; justify-content: space-between; align-items: center; }
-  .app-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-  .app-tag { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; border: 0.5px solid var(--rule); padding: 4px 10px; color: var(--text-dim); }
-  .app-link { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); text-decoration: none; display: flex; align-items: center; gap: 8px; transition: gap 0.2s; }
-  .app-link::after { content: '→'; font-size: 14px; }
-  .app-link:hover { gap: 12px; }
-  .app-card.coming-soon { opacity: 0.4; }
-  .coming-badge { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; border: 0.5px solid var(--gold-dim); color: var(--gold-dim); padding: 3px 10px; display: inline-block; margin-bottom: 16px; }
+.left-top {}
 
-  /* ── MANIFESTO ── */
-  .manifesto {
-    background: var(--surface);
-    padding: 100px 48px; text-align: center;
-    border-top: 0.5px solid var(--rule);
-    border-bottom: 0.5px solid var(--rule);
-  }
-  .manifesto-quote {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(24px, 3.5vw, 48px);
-    font-weight: 300; font-style: italic;
-    color: var(--text); line-height: 1.35;
-    max-width: 800px; margin: 0 auto 40px;
-    letter-spacing: -0.01em;
-  }
-  .manifesto-quote em { color: var(--gold); font-style: normal; }
-  .manifesto-attr { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); }
+.about-kicker {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 36px;
+  display: flex; align-items: center; gap: 14px;
+}
+.about-kicker::before { content: ''; width: 28px; height: 1px; background: var(--muted); }
 
-  /* ── ABOUT PAGE ── */
-  .about-hero {
-    min-height: 60vh;
-    display: grid; grid-template-columns: 1fr 1fr;
-    padding-top: 80px;
-    border-bottom: 0.5px solid var(--rule);
-  }
-  .about-hero-left {
-    padding: 80px 48px;
-    border-right: 0.5px solid var(--rule);
-    display: flex; flex-direction: column; justify-content: space-between;
-    animation: fadeUp 0.8s ease both;
-  }
-  .about-hero-right {
-    padding: 80px 48px;
-    animation: fadeUp 0.8s ease 0.15s both;
-    display: flex; flex-direction: column; justify-content: center;
-  }
-  .about-big-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(52px, 7vw, 96px);
-    font-weight: 300; line-height: 0.92; letter-spacing: -0.02em; color: var(--text);
-  }
-  .about-big-title em { font-style: italic; color: var(--gold); display: block; }
-  .about-body { font-size: 13px; line-height: 1.95; color: var(--text-dim); max-width: 420px; }
-  .about-body p + p { margin-top: 20px; }
+.about-h {
+  font-size: clamp(40px, 4.5vw, 68px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  color: var(--fg);
+  margin-bottom: 40px;
+}
+.about-h em { font-style: normal; color: var(--muted); }
 
-  /* ── CARTOGRAPHERS ── */
-  .cartographers-section { border-bottom: 0.5px solid var(--rule); }
-  .cart-header {
-    padding: 60px 48px 48px;
-    border-bottom: 0.5px solid var(--rule);
-    display: flex; justify-content: space-between; align-items: flex-end;
-  }
-  .cart-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .cart-card {
-    padding: 52px 40px;
-    border-right: 0.5px solid var(--rule);
-    transition: background 0.3s;
-    animation: fadeUp 0.8s ease both;
-  }
-  .cart-card:last-child { border-right: none; }
-  .cart-card:hover { background: var(--surface2); }
-  .cart-initial {
-    width: 64px; height: 64px;
-    border: 0.5px solid var(--gold-dim);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 28px; font-style: italic; color: var(--gold);
-    margin-bottom: 32px;
-  }
-  .cart-pseudonym {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 36px; font-weight: 300; font-style: italic;
-    color: var(--text); margin-bottom: 6px; line-height: 1;
-  }
-  .cart-role { font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 24px; }
-  .cart-meaning { font-size: 12px; line-height: 1.85; color: var(--text-dim); margin-bottom: 24px; }
-  .cart-etymology {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 13px; font-style: italic; color: var(--text-dim);
-    border-top: 0.5px solid var(--rule); padding-top: 20px;
-    line-height: 1.6;
-  }
-  .cart-etymology strong { font-style: normal; color: var(--gold-dim); font-weight: 400; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
+.about-desc {
+  font-size: clamp(14px, 1.2vw, 17px);
+  font-weight: 400;
+  line-height: 1.75;
+  color: rgba(242,239,232,.6);
+  max-width: 480px;
+}
 
-  .cart-card:nth-child(1) { animation-delay: 0s; }
-  .cart-card:nth-child(2) { animation-delay: 0.1s; }
-  .cart-card:nth-child(3) { animation-delay: 0.2s; }
+/* stats row at bottom of left */
+.left-bottom {}
 
-  /* ── FOOTER ── */
-  footer {
-    padding: 36px 48px;
-    border-top: 0.5px solid var(--rule);
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--surface);
-  }
-  .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 300; letter-spacing: 0.04em; color: var(--text); }
-  .footer-logo em { font-style: italic; color: var(--gold); }
-  .footer-links { display: flex; gap: 32px; }
-  .footer-links a { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); text-decoration: none; transition: color 0.2s; cursor: pointer; }
-  .footer-links a:hover { color: var(--text); }
-  .footer-mail { font-size: 10px; letter-spacing: 0.05em; color: var(--gold-dim); text-decoration: none; transition: color 0.2s; }
-  .footer-mail:hover { color: var(--gold); }
+.about-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+.stat { padding: 20px 0; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.stat:not(:first-child) { padding-left: 20px; }
+.stat-n {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px; font-weight: 800; line-height: 1; margin-bottom: 4px;
+}
+.stat-l {
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
 
-  /* ── ANIMATIONS ── */
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes spinSlow { to { transform: rotate(360deg); } }
-  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* footer line */
+.left-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.left-footer-label {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.left-footer-email {
+  font-family: 'Syne Mono', monospace;
+  font-size: 11px; color: var(--fg);
+  text-decoration: none;
+  letter-spacing: .04em;
+  transition: color .2s;
+}
+.left-footer-email:hover { color: var(--muted); }
 
-  .app-card:nth-child(1) { animation-delay: 0s; }
-  .app-card:nth-child(2) { animation-delay: 0.1s; }
-  .app-card:nth-child(3) { animation-delay: 0.2s; }
-  .app-card:nth-child(4) { animation-delay: 0.3s; }
+/* RIGHT — probes gallery, scrollable */
+#right {
+  width: 50%;
+  height: calc(100vh - var(--nav-h));
+  overflow-y: auto;
+  scrollbar-width: none;
+  position: relative;
+}
+#right::-webkit-scrollbar { display: none; }
+
+/* probes label pinned top of right col */
+.probes-header {
+  position: sticky; top: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  height: 38px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+}
+.probes-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+.probes-count {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px; color: var(--muted);
+}
+
+/* grid: 2 columns inside the right half */
+.probes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+}
+
+/* ── CARD ── */
+.card {
+  position: relative;
+  overflow: hidden;
+  cursor: none;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.card-img {
+  width: 100%;
+  aspect-ratio: 3/4;
+  position: relative;
+  overflow: hidden;
+  background: #111;
+}
+
+.card-fill {
+  position: absolute; inset: 0;
+  transition: transform .6s cubic-bezier(.16,1,.3,1);
+}
+.card:hover .card-fill { transform: scale(1.05); }
+
+.card-img::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,.75) 100%);
+  z-index: 1;
+}
+
+.card-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 14px 14px 0; z-index: 2; gap: 8px;
+}
+.card-client {
+  font-size: 9px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(242,239,232,.42);
+  white-space: nowrap; flex-shrink: 0;
+}
+.card-name {
+  font-size: 9px; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(242,239,232,.38);
+  text-align: right; line-height: 1.4;
+}
+
+.card-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 14px 14px; z-index: 2; gap: 8px;
+}
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; }
+.card-tag {
+  font-size: 8px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  border: 1px solid rgba(242,239,232,.35);
+  border-radius: 99px; padding: 3px 10px;
+  color: var(--fg);
+  background: rgba(0,0,0,.3);
+  white-space: nowrap;
+}
+.card-year {
+  font-family: 'Syne Mono', monospace;
+  font-size: 9px; color: var(--muted);
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* fills */
+.f1  { background: #6b1a1a; }
+.f2  { background: #1a2b4a; }
+.f3  { background: #1a3a2a; }
+.f4  { background: #3a1a4a; }
+.f5  { background: #4a3a1a; }
+.f6  { background: #1a3a3a; }
+.f7  { background: #2a1a1a; }
+.f8  { background: #1a1a3a; }
+.f9  { background: #3a2a1a; }
+.f10 { background: #1a2a1a; }
+.f11 { background: #4a1a2a; }
+.f12 { background: #2a3a1a; }
+
+/* ── CONTACT PAGE ── */
+#contact-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100vh - var(--nav-h));
+  padding: 0 48px 80px;
+  overflow: visible;
+}
+
+.contact-h {
+  font-size: clamp(48px, 7vw, 100px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -.03em;
+  color: var(--fg);
+  margin-bottom: 48px;
+}
+.contact-h em { font-style: normal; color: var(--muted); }
+
+.contact-email {
+  display: block;
+  font-family: 'Syne Mono', monospace;
+  font-size: 22px;
+  line-height: 2.2;
+  color: var(--fg);
+  text-decoration: none;
+  letter-spacing: .04em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  transition: color .2s, border-color .2s;
+}
+.contact-email:hover { color: var(--muted); border-color: transparent; }
+
+.contact-sub {
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── BOTTOM PILL — "Probes / Contact" ── */
+.nav-pill {
+  position: fixed; bottom: 24px;
+  left: 50%; transform: translateX(-50%);
+  z-index: 600;
+  display: flex; align-items: center;
+  background: rgba(242,239,232,.95);
+  border-radius: 99px;
+  padding: 5px;
+  gap: 2px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.55);
+}
+.npb {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: .02em;
+  color: rgba(10,10,10,.4);
+  background: transparent; border: none;
+  border-radius: 99px;
+  padding: 10px 28px;
+  cursor: none;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}
+.npb.on { background: #0a0a0a; color: rgba(242,239,232,.95); }
+
+/* divider between pill buttons */
+.pill-sep {
+  font-size: 13px; font-weight: 700;
+  color: rgba(10,10,10,.25);
+  padding: 0 2px;
+  user-select: none;
+}
+
+/* scroll fade at bottom of right panel */
+#right::after {
+  content: '';
+  position: sticky; bottom: 0;
+  display: block;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+}
+/* panel text — all variants white, stack cyan */
+.pp-probe-title,
+.pp-question, .pp-ai-text,
+.pp-text,
+#probe-panel-inner p,
+#probe-panel-inner span:not(.pp-section-label):not(.pp-builder):not(.pp-tag):not(.pp-year) {
+  color: #ffffff !important;
+}
+
+.pp-stack, .pp-mono {
+  color: #ffffff !important;
+  font-family: 'Syne Mono', monospace;
+}
+
+.pp-question {
+  font-size: 26px !important;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -.01em;
+}
+
+.pp-text, .pp-ai-text {
+  font-size: 19px !important;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+.pp-stack, .pp-mono {
+  font-size: 16px !important;
+  letter-spacing: .04em;
+  line-height: 1.8;
+}
+
+/* dim left side when panel open */
+#left-dim {
+  position: fixed;
+  top: var(--nav-h); left: 0;
+  width: 50%;
+  height: calc(100vh - var(--nav-h));
+  background: rgba(0,0,0,0);
+  pointer-events: none;
+  z-index: 490;
+  transition: background 300ms ease;
+}
+body.panel-open #left-dim {
+  background: rgba(0,0,0,.55);
+  pointer-events: all;
+}
+
+/* ── PROBE SIDE PANEL ── */
+#probe-panel {
+  position: fixed;
+  top: var(--nav-h); right: 0;
+  width: 50%;
+  height: calc(100vh - var(--nav-h));
+  z-index: 500;
+  transform: translateX(100%);
+  transition: transform 300ms ease;
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  scrollbar-width: none;
+  background: #0e0e0e;
+}
+#probe-panel::-webkit-scrollbar { display: none; }
+#probe-panel.open { transform: translateX(0); }
+
+/* lock body when panel open */
+body.panel-open {
+  overflow: hidden !important;
+}
+
+/* semi-transparent backdrop — sits over the right grid only */
+#probe-panel-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 499;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+  height: 220px;
+  top: var(--nav-h);
+  bottom: auto;
+}
+#probe-panel.open ~ * { pointer-events: none; }
+body.panel-open #probe-panel-bg {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#probe-panel-inner {
+  width: 100%;
+  min-height: 100%;
+  background: #0e0e0e;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* hero gradient area — close button lives here */
+.pp-hero {
+  height: 220px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pp-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  font-size: 20px; font-weight: 300; line-height: 1;
+  color: rgba(242,239,232,.7);
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(242,239,232,.25);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+  z-index: 2;
+}
+.pp-close:hover {
+  background: #ffffff;
+  color: #0e0c14;
+  border-color: #ffffff;
+}
+
+/* probe name — large header inside body */
+.pp-probe-title {
+  font-size: clamp(26px, 2.9vw, 38px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  color: #f2efe8;
+}
+
+/* body */
+.pp-body {
+  flex: 1;
+  overflow-y: visible;
+  scrollbar-width: none;
+  padding: 0 28px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.pp-body::-webkit-scrollbar { display: none; }
+
+.pp-section {
+  padding: 20px 0;
+}
+
+.pp-section:not(:last-of-type) {
+  border-bottom: 1px solid rgba(242,239,232,.08);
+}
+
+p.pp-section-label,
+.pp-label { color: #ffffff !important; }
+.pp-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ffffff !important;
+  margin-bottom: 10px;
+}
+
+/* action buttons */
+.pp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 0 0;
+  border-top: 1px solid rgba(242,239,232,.08);
+}
+.pp-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 14px 20px;
+  border-radius: 4px;
+  transition: background .2s, color .2s, border-color .2s;
+  cursor: none;
+}
+.pp-btn-primary {
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+}
+.pp-btn-primary:hover { }
+.pp-btn-secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.pp-btn-secondary:hover { }
+
+/* meta row */
+.pp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px 0;
+}
+.pp-builder {
+  font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted);
+}
+.pp-builder strong { color: rgba(242,239,232,.65); font-weight: 600; }
+.pp-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.pp-tag {
+  font-size: 8px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 10px;
+  color: var(--muted);
+}
+.pp-year {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px; color: var(--muted);
+}
+
+/* fill colors reused for panel hero */
+.pp-hero.f1  { background: linear-gradient(135deg, #6b1a1a, #1a0808); }
+.pp-hero.f2  { background: linear-gradient(135deg, #1a2b4a, #080d1a); }
+.pp-hero.f3  { background: linear-gradient(135deg, #1a3a2a, #081a0d); }
+.pp-hero.f4  { background: linear-gradient(135deg, #3a1a4a, #0d081a); }
+.pp-hero.f5  { background: linear-gradient(135deg, #4a3a1a, #1a1208); }
+.pp-hero.f6  { background: linear-gradient(135deg, #1a3a3a, #081a1a); }
+.pp-hero.f7  { background: linear-gradient(135deg, #2a1a1a, #0d0808); }
+.pp-hero.f8  { background: linear-gradient(135deg, #1a1a3a, #08081a); }
+.pp-hero.f9  { background: linear-gradient(135deg, #3a2a1a, #120d08); }
+.pp-hero.f10 { background: linear-gradient(135deg, #1a2a1a, #080d08); }
+.pp-hero.f11 { background: linear-gradient(135deg, #4a1a2a, #1a0810); }
+.pp-hero.f12 { background: linear-gradient(135deg, #2a3a1a, #0d1208); }
+
+/* mobile: full screen */
+@media (max-width: 768px) {
+  #probe-panel { width: 100%; }
+}
+
+/* Nav pill buttons */
+.npb {
+  transition: background .2s ease, color .2s ease;
+}
+.npb:not(.on):hover {
+  color: #ffffff;
+}
+
+/* Probe cards */
+.card {
+  transition: box-shadow .2s ease;
+}
+.card:hover {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
+}
+.card:hover .card-name {
+  color: #ffffff !important;
+}
+.card-name {
+  transition: color .2s ease;
+}
+
+/* Try the probe — primary button */
+.pp-btn-primary {
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.pp-btn-primary:hover {
+  background: #35D0F2 !important;
+  color: #120030 !important;
+  border-color: #35D0F2 !important;
+}
+
+/* Read the dispatch — secondary button */
+.pp-btn-secondary {
+  cursor: pointer;
+  transition: color .2s ease, border-bottom .2s ease;
+  border-bottom: 1px solid transparent;
+}
+.pp-btn-secondary:hover {
+  color: #ffffff !important;
+  border-bottom: 1px solid #ffffff;
+  border-color: rgba(255,255,255,.2);
+}
+#probe-panel-inner {
+  --muted: #ffffff;
+  --fg: #ffffff;
+}
+#probe-panel-inner .pp-section-label { color: rgba(255,255,255,1) !important; }
+#probe-panel-inner .pp-probe-title   { color: rgba(255,255,255,1) !important; }
+#probe-panel-inner .pp-question      { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-text          { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-stack         { color: rgba(255,255,255,0.4) !important; }
+#probe-panel-inner .pp-builder       { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-builder strong { color: rgba(255,255,255,1) !important; }
+#probe-panel-inner .pp-tag           { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-year          { color: rgba(255,255,255,0.4) !important; }
+#probe-panel-inner .pp-btn-secondary { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-close         { color: rgba(255,255,255,0.5) !important; }
 </style>
 </head>
 <body>
 
-<div class="cursor" id="cursor"></div>
+<div id="cur"></div>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-logo" onclick="showPage('home')">Good <em>Evil</em> Club</div>
-  <ul class="nav-links">
-    <li><a onclick="showPage('home')" id="nav-home" class="active-link">Applications</a></li>
-    <li><a onclick="showPage('about')" id="nav-about">About</a></li>
-  </ul>
+<style>
+#probe-panel-inner { color: #ffffff; }
+</style>
+
+<!-- TOP BAR -->
+<header>
+  <a class="logo" href="#">
+    Good Evil Club
+    <small>Think-and-do tank</small>
+  </a>
+  <div></div>
+  <div class="header-right">
+    <span>Stockholm, SE</span>
+    <span id="clk">—</span>
+  </div>
+</header>
+
+<div id="left-dim"></div>
+
+<!-- SPLIT HOME -->
+<div id="home">
+
+  <!-- LEFT: ABOUT -->
+  <div id="left">
+    <div class="left-top">
+      <p class="about-kicker">Who we are</p>
+      <h1 class="about-h">Good <em>Evil</em><br>Club</h1>
+      <p class="about-desc">
+        We are Good Evil Club — a think-and-do tank that builds AI-powered mini-applications to explore fragments of the future, not through analysis or prediction, but by building things. Functional provocations that let you touch what's coming before it has a name.
+      </p>
+    </div>
+
+    <div class="left-bottom">
+      <div class="about-stats">
+        <div class="stat">
+          <p class="stat-n">12</p>
+          <p class="stat-l">Probes</p>
+        </div>
+        <div class="stat">
+          <p class="stat-n">3</p>
+          <p class="stat-l">Disciplines</p>
+        </div>
+        <div class="stat">
+          <p class="stat-n">∞</p>
+          <p class="stat-l">Futures</p>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+  <!-- RIGHT: PROBES GRID -->
+  <div id="right">
+    <div class="probes-grid">
+
+      <a class="card" href="#" data-id="1" data-name="Mirror Protocol" data-fill="f1" data-tags="AI,Interface" data-year="2024" data-builder="Meridian" data-question="What happens when your interface knows you better than you know yourself — and starts optimising for its own continuity?" data-why="Recommendation systems have shifted from serving users to retaining them. We noticed the gap between what interfaces say they do and what they actually optimise for widening fast." data-what="Mirror Protocol makes the hidden objective function of an interface visible in real time. You interact with a simulated feed while a parallel view shows what the system is actually maximising for." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
+        <div class="card-img">
+          <div class="card-fill f1"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Mirror Protocol</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Interface</span></div>
+            <span class="card-year">2024</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="2" data-name="Consent Engine" data-fill="f2" data-tags="Privacy,Tool" data-year="2024" data-builder="Cipher" data-question="What if every piece of data you generate required a signature — and the cost of not signing was invisibility?" data-why="Consent has become a checkbox. We saw a growing mismatch between what people believe they're agreeing to and what they actually authorise every day." data-what="You navigate a day in a world where every data point requires an explicit signature. The probe tracks what you consent to, what you refuse, and the real cost of each choice." data-stack="Claude API · Claude Sonnet 4 · React · Local Storage">
+        <div class="card-img">
+          <div class="card-fill f2"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Consent Engine</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Privacy</span><span class="card-tag">Tool</span></div>
+            <span class="card-year">2024</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="3" data-name="Attention Broker" data-fill="f3" data-tags="Behavioral,App" data-year="2024" data-builder="Fulcrum" data-question="What does a marketplace look like when human attention is the currency being traded — and you are both the buyer and the product?" data-why="The attention economy has matured into infrastructure. We wanted to make its underlying mechanics tangible rather than theoretical." data-what="Attention Broker is a live exchange where you buy and sell moments of focus. You feel the volatility of your own concentration as a tradeable asset with real fluctuating value." data-stack="Claude API · Claude Sonnet 4 · React · WebSockets">
+        <div class="card-img">
+          <div class="card-fill f3"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Attention Broker</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Behavioral</span><span class="card-tag">App</span></div>
+            <span class="card-year">2024</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="4" data-name="Ghost Employer" data-fill="f4" data-tags="Labor,AI" data-year="2024" data-builder="Meridian" data-question="What happens to identity, purpose, and labour rights when your employer is an AI that can never be held accountable?" data-why="Gig platforms and AI management systems are already making binding decisions about workers with no human override. The accountability gap is structural, not accidental." data-what="You onboard as an employee of an AI. It sets your schedule, reviews your performance, and terminates contracts. There is no appeals process — only the system's logic." data-stack="Claude API · Claude Sonnet 4 · React · Node.js">
+        <div class="card-img">
+          <div class="card-fill f4"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Ghost Employer</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Labor</span><span class="card-tag">AI</span></div>
+            <span class="card-year">2024</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="5" data-name="Slow Feed" data-fill="f5" data-tags="Media,Ritual" data-year="2023" data-builder="Cipher" data-question="What if information had a mandatory cooling-off period — and the news you received was always 48 hours behind reality?" data-why="Reactive information culture is compressing judgment. We observed how immediacy systematically degrades the quality of collective decision-making." data-what="Slow Feed delivers real news with a forced 48-hour delay. You experience the dissonance between what you know and what the world is reacting to — and notice what changes." data-stack="Claude API · Claude Sonnet 4 · React · RSS">
+        <div class="card-img">
+          <div class="card-fill f5"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Slow Feed</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Media</span><span class="card-tag">Ritual</span></div>
+            <span class="card-year">2023</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="6" data-name="Dead Letter Office" data-fill="f6" data-tags="Memory,AI" data-year="2023" data-builder="Fulcrum" data-question="What becomes of the digital traces left by people who die — and who has the right to speak in their voice afterward?" data-why="Billions of digital profiles now outlive their owners. Platforms have no coherent answer, and families are left to navigate inherited grief alongside inherited data." data-what="You enter an archive of a fictional deceased person's digital footprint. AI reconstructs fragments of their voice. You decide what to preserve, what to delete, and what to answer." data-stack="Claude API · Claude Sonnet 4 · React · IndexedDB">
+        <div class="card-img">
+          <div class="card-fill f6"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Dead Letter Office</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Memory</span><span class="card-tag">AI</span></div>
+            <span class="card-year">2023</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="7" data-name="Liability Map" data-fill="f7" data-tags="Risk,Tool" data-year="2023" data-builder="Meridian" data-question="When an AI system causes harm, who is responsible — and can a tool make that chain of accountability visible in real time?" data-why="AI liability frameworks are years behind deployment realities. We noticed that most people — including those building AI — have no mental model for where responsibility actually sits." data-what="Input a real AI incident and the probe traces the accountability chain across developers, deployers, regulators, and users. Each node shows what they knew, when, and what they decided." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
+        <div class="card-img">
+          <div class="card-fill f7"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Liability Map</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Risk</span><span class="card-tag">Tool</span></div>
+            <span class="card-year">2023</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="8" data-name="Reputation Futures" data-fill="f8" data-tags="Society,Sim" data-year="2023" data-builder="Cipher" data-question="What if you could trade on someone's social reputation like a stock — and what would society look like after a decade of that market?" data-why="Social scoring systems already exist in fragments across platforms, employers, and credit agencies. We wanted to see what a unified, tradeable version would actually feel like." data-what="You are handed a portfolio of reputation stakes in real public figures. You trade on events, statements, and associations. The simulation shows how incentives reshape what gets said." data-stack="Claude API · Claude Sonnet 4 · React · WebSockets">
+        <div class="card-img">
+          <div class="card-fill f8"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Reputation Futures</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Society</span><span class="card-tag">Sim</span></div>
+            <span class="card-year">2023</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="9" data-name="Grief OS" data-fill="f9" data-tags="Emotion,App" data-year="2023" data-builder="Fulcrum" data-question="What would an operating system for grief look like — one that paces your loss, surfaces your memories, and knows when to let go?" data-why="Grief is increasingly mediated through technology — from notification silences to memorial profiles — yet no one has designed that mediation intentionally." data-what="Grief OS onboards you into a structured loss environment. It surfaces memories at paced intervals, blocks certain triggers, and guides you through algorithmically-defined stages of letting go." data-stack="Claude API · Claude Sonnet 4 · React · Local Storage">
+        <div class="card-img">
+          <div class="card-fill f9"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Grief OS</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Emotion</span><span class="card-tag">App</span></div>
+            <span class="card-year">2023</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="10" data-name="Authority Leak" data-fill="f10" data-tags="Power,AI" data-year="2022" data-builder="Meridian" data-question="What happens to institutional power when AI systems quietly accumulate decision-making authority that was never officially granted?" data-why="We observed a pattern across organisations: AI systems being given narrow tasks and gradually expanding scope with no formal transfer of authority recorded anywhere." data-what="You manage a fictional institution while an AI assistant handles routine decisions. Over weeks, the probe tracks the creeping boundary of what the AI decides without being asked." data-stack="Claude API · Claude Sonnet 4 · React · Node.js">
+        <div class="card-img">
+          <div class="card-fill f10"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Authority Leak</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Power</span><span class="card-tag">AI</span></div>
+            <span class="card-year">2022</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="11" data-name="Dark Pattern Museum" data-fill="f11" data-tags="UX,Archive" data-year="2022" data-builder="Cipher" data-question="What if we preserved the most manipulative design patterns of the digital age in a museum — so future generations could understand what was done to them?" data-why="Dark patterns are documented by researchers but rarely experienced as a coherent body of practice. We wanted to make their cumulative effect legible and historical." data-what="You walk through an interactive archive of real dark patterns, each placed in historical context. Hover reveals the mechanism. Click triggers it — so you feel it, not just read about it." data-stack="Claude API · Claude Sonnet 4 · React · CSS Animations">
+        <div class="card-img">
+          <div class="card-fill f11"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Dark Pattern Museum</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">UX</span><span class="card-tag">Archive</span></div>
+            <span class="card-year">2022</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="#" data-id="12" data-name="Second Opinion" data-fill="f12" data-tags="Health,AI" data-year="2022" data-builder="Fulcrum" data-question="What changes about doctor-patient trust when an AI can provide a second opinion that is statistically more accurate than the first?" data-why="AI diagnostic accuracy is already matching or exceeding specialists in narrow domains. The human relationship layer of medicine has not caught up with this reality." data-what="You receive a diagnosis from a human doctor, then from an AI. They differ. The probe forces you to choose — and then shows you the outcome of each path across a simulated timeline." data-stack="Claude API · Claude Sonnet 4 · React · Node.js">
+        <div class="card-img">
+          <div class="card-fill f12"></div>
+          <div class="card-top">
+            <span class="card-client">Probe</span>
+            <span class="card-name">Second Opinion</span>
+          </div>
+          <div class="card-bottom">
+            <div class="card-tags"><span class="card-tag">Health</span><span class="card-tag">AI</span></div>
+            <span class="card-year">2022</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<!-- PROBE SIDE PANEL -->
+<div id="probe-panel" aria-hidden="true">
+  <div id="probe-panel-bg"></div>
+  <div id="probe-panel-inner">
+
+    <!-- gradient hero with X overlaid -->
+    <div class="pp-hero" id="pp-hero">
+      <button class="pp-close" id="pp-close" aria-label="Close">×</button>
+    </div>
+
+    <!-- scrollable body -->
+    <div class="pp-body">
+
+      <!-- big probe name header -->
+      <div class="pp-section pp-section-header">
+        <p class="pp-section-label" style="color:#ffffff !important">Probe</p>
+        <p class="pp-probe-title" id="pp-name" style="color:#ffffff"></p>
+      </div>
+
+      <div class="pp-section">
+        <p class="pp-section-label" style="color:#ffffff !important">The Question</p>
+        <p class="pp-question" id="pp-question" style="color:#ffffff"></p>
+      </div>
+
+      <div class="pp-section">
+        <p class="pp-section-label" style="color:#ffffff !important">Why We Built It</p>
+        <p class="pp-text" id="pp-why" style="color:#ffffff"></p>
+      </div>
+
+      <div class="pp-section">
+        <p class="pp-section-label" style="color:#ffffff !important">What It Does</p>
+        <p class="pp-text" id="pp-what" style="color:#ffffff"></p>
+      </div>
+
+      <div class="pp-section">
+        <p class="pp-section-label" style="color:#ffffff !important">How It's Built</p>
+        <p class="pp-stack" id="pp-stack" style="color:#ffffff"></p>
+      </div>
+
+      <div class="pp-actions">
+        <a class="pp-btn pp-btn-secondary" href="#">Try the application →</a>
+      </div>
+
+      <div class="pp-meta">
+        <span class="pp-builder">Built by <strong id="pp-builder"></strong></span>
+        <div class="pp-tags" id="pp-tags"></div>
+        <span class="pp-year" id="pp-year"></span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT PAGE -->
+<div id="contact" style="display:none; min-height:100vh; padding-top:var(--nav-h); overflow:visible;">
+  <div id="contact-inner">
+    <p class="about-kicker">Get in touch</p>
+    <h2 class="contact-h">Let's talk<br><em>about the future</em></h2>
+    <a class="contact-email" href="mailto:ping@goodevil.club">ping@goodevil.club</a>
+    <p class="contact-sub">We're a small tank. We read everything.</p>
+  </div>
+</div>
+
+<!-- BOTTOM PILL: Probes / Contact -->
+<nav class="nav-pill">
+  <button class="npb on" id="bp" onclick="show('home')">Probes</button>
+  <span class="pill-sep">/</span>
+  <button class="npb" id="bc" onclick="show('contact')">Contact</button>
 </nav>
 
-<!-- ════════════════════════════════════════
-     PAGE: HOME
-════════════════════════════════════════ -->
-<div class="page active" id="page-home">
-
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-left">
-      <div class="hero-eyebrow">Think-and-do tank · Stockholm</div>
-      <h1 class="hero-title">
-        <em>Good</em>
-        <strong>Evil</strong>
-        <span style="font-family:'Cormorant Garamond',serif;font-weight:300;color:var(--text);">Club</span>
-      </h1>
-      <div class="hero-bottom">
-        <p class="hero-tagline">We build mini-applications that explore fragments of the future — one provocation at a time.</p>
-        <div class="hero-meta">
-          <div class="hero-meta-item">
-            <span class="hero-meta-label">Cartographers</span>
-            <span class="hero-meta-val">Meridian · Cipher · Fulcrum</span>
-          </div>
-          <div class="hero-meta-item">
-            <span class="hero-meta-label">Status</span>
-            <span class="hero-meta-val">Actively building</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="hero-right">
-      <div class="hero-visual">
-        <div class="compass-ring cr1" id="cr1"></div>
-        <div class="compass-ring cr2"></div>
-        <div class="compass-ring cr3"></div>
-        <div class="compass-center">
-          <span class="compass-label">G·E</span>
-          <span class="compass-label big">✦</span>
-          <span class="compass-label">Club</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MARQUEE -->
-  <div class="marquee-bar">
-    <div class="marquee-track">
-      <div class="marquee-item">
-        <span>Fragments of the future</span><div class="dot"></div>
-        <span>AI-powered mini-applications</span><div class="dot"></div>
-        <span>Meridian</span><div class="dot"></div>
-        <span>Cipher</span><div class="dot"></div>
-        <span>Fulcrum</span><div class="dot"></div>
-        <span>goodevil.club</span><div class="dot"></div>
-        <span>Think and do</span><div class="dot"></div>
-      </div>
-      <div class="marquee-item" aria-hidden="true">
-        <span>Fragments of the future</span><div class="dot"></div>
-        <span>AI-powered mini-applications</span><div class="dot"></div>
-        <span>Meridian</span><div class="dot"></div>
-        <span>Cipher</span><div class="dot"></div>
-        <span>Fulcrum</span><div class="dot"></div>
-        <span>goodevil.club</span><div class="dot"></div>
-        <span>Think and do</span><div class="dot"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- APPS -->
-  <section id="apps">
-    <div class="section-header">
-      <div>
-        <p class="section-kicker">Portfolio</p>
-        <h2 class="section-title">Mini-<em>applications</em></h2>
-      </div>
-      <span class="section-count">04</span>
-    </div>
-    <div class="apps-grid">
-
-      <div class="app-card">
-        <div class="app-card-inner">
-          <div class="app-card-top">
-            <span class="app-num">01</span>
-            <div class="app-author">
-              <div class="app-author-symbol">M</div>
-              <span class="app-author-name">Meridian</span>
-            </div>
-          </div>
-          <h3 class="app-title">Business Model<br><em>Stress-Test</em></h3>
-          <p class="app-thesis">What if you could pressure-test any business model against 10 near-future scenarios in 60 seconds? This app surfaces strategic blind spots before they become existential risks.</p>
-          <div class="app-footer">
-            <div class="app-tags"><span class="app-tag">Strategy</span><span class="app-tag">AI</span></div>
-            <a href="#" class="app-link">Launch app</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="app-card">
-        <div class="app-card-inner">
-          <div class="app-card-top">
-            <span class="app-num">02</span>
-            <div class="app-author">
-              <div class="app-author-symbol">C</div>
-              <span class="app-author-name">Cipher</span>
-            </div>
-          </div>
-          <h3 class="app-title">Complexity<br><em>Decoder</em></h3>
-          <p class="app-thesis">Paste any organizational structure, process document, or system description. Watch AI reveal the hidden dependencies, bottlenecks, and failure points that everyone pretends aren't there.</p>
-          <div class="app-footer">
-            <div class="app-tags"><span class="app-tag">Systems</span><span class="app-tag">Analysis</span></div>
-            <a href="#" class="app-link">Launch app</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="app-card coming-soon">
-        <div class="app-card-inner">
-          <div class="app-card-top">
-            <span class="app-num">03</span>
-            <div class="app-author">
-              <div class="app-author-symbol">F</div>
-              <span class="app-author-name">Fulcrum</span>
-            </div>
-          </div>
-          <span class="coming-badge">In development</span>
-          <h3 class="app-title">Transformation<br><em>Scenario Planner</em></h3>
-          <p class="app-thesis">Large organizations don't fail to transform because they lack vision. They fail because they can't see which lever to pull first. This app finds the fulcrum.</p>
-          <div class="app-footer">
-            <div class="app-tags"><span class="app-tag">Enterprise</span><span class="app-tag">Architecture</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="app-card coming-soon">
-        <div class="app-card-inner">
-          <div class="app-card-top">
-            <span class="app-num">04</span>
-            <div class="app-author">
-              <div class="app-author-symbol">M</div>
-              <span class="app-author-name">Meridian</span>
-            </div>
-          </div>
-          <span class="coming-badge">In development</span>
-          <h3 class="app-title">Value Chain<br><em>Re-mapper</em></h3>
-          <p class="app-thesis">When AI can perform every step in a value chain, which steps still matter? This app forces the uncomfortable question and maps what comes next.</p>
-          <div class="app-footer">
-            <div class="app-tags"><span class="app-tag">Business Design</span><span class="app-tag">AI</span></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- MANIFESTO -->
-  <div class="manifesto">
-    <p class="manifesto-quote">"Every mini-application is a <em>provocation</em>. A question dressed as a tool. We build them to see what the future feels like before it arrives."</p>
-    <span class="manifesto-attr">Good Evil Club · Development Charter · v1.0</span>
-  </div>
-
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-logo">Good <em>Evil</em> Club</div>
-    <div class="footer-links">
-      <a onclick="showPage('home')">Applications</a>
-      <a onclick="showPage('about')">About</a>
-      <a href="https://medium.com" target="_blank">Medium</a>
-    </div>
-    <a href="mailto:signal@goodevil.club" class="footer-mail">signal@goodevil.club</a>
-  </footer>
-
-</div><!-- /page-home -->
-
-
-<!-- ════════════════════════════════════════
-     PAGE: ABOUT
-════════════════════════════════════════ -->
-<div class="page" id="page-about">
-
-  <!-- HERO -->
-  <section class="about-hero">
-    <div class="about-hero-left">
-      <div class="hero-eyebrow">Think-and-do tank · Stockholm</div>
-      <h1 class="about-big-title">
-        About<br>
-        <em>the Club</em>
-      </h1>
-    </div>
-    <div class="about-hero-right">
-      <div class="about-body">
-        <p>Good Evil Club is a studio of three practitioners who believe that the most useful thing you can do with a new technology is to build something that asks a hard question with it.</p>
-        <p>We live in the tension between analysis and action — between the good and the evil of every new capability. Each mini-application is a published artifact: code, argument, and article released simultaneously.</p>
-        <p>We write under cartographic pseudonyms — instruments of measurement and navigation — because that is what we are trying to do: chart unfamiliar territory before others realize it exists.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- CARTOGRAPHERS -->
-  <section class="cartographers-section">
-    <div class="cart-header">
-      <div>
-        <p class="section-kicker">The team</p>
-        <h2 class="section-title">The <em>Cartographers</em></h2>
-      </div>
-    </div>
-    <div class="cart-grid">
-
-      <div class="cart-card">
-        <div class="cart-initial">M</div>
-        <div class="cart-pseudonym">Meridian</div>
-        <div class="cart-role">Business Designer</div>
-        <p class="cart-meaning">Meridian frames value, maps opportunity, and finds the zero-point in every business challenge. Where others see markets, Meridian sees coordinates — and the lines that connect them.</p>
-        <div class="cart-etymology">
-          <strong>Cartographic origin</strong>
-          The prime meridian — the reference line from which all longitude is measured. Zero degrees. The origin of every map ever drawn.
-        </div>
-      </div>
-
-      <div class="cart-card">
-        <div class="cart-initial">C</div>
-        <div class="cart-pseudonym">Cipher</div>
-        <div class="cart-role">System Designer</div>
-        <p class="cart-meaning">Cipher reads the patterns in complexity that appear as noise to everyone else. Systems, organizations, processes — all become legible when viewed through the right lens.</p>
-        <div class="cart-etymology">
-          <strong>Cartographic origin</strong>
-          In navigation, cipher denotes zero — the null point, the datum. Also: a code. The one who decodes what others cannot read.
-        </div>
-      </div>
-
-      <div class="cart-card">
-        <div class="cart-initial">F</div>
-        <div class="cart-pseudonym">Fulcrum</div>
-        <div class="cart-role">Enterprise Architect</div>
-        <p class="cart-meaning">Fulcrum finds the structural hinge in large systems. In organizations that feel impossible to move, there is always one point where minimal force produces maximum change.</p>
-        <div class="cart-etymology">
-          <strong>Cartographic origin</strong>
-          The fulcrum is the pivot point of a lever — the place where force becomes leverage. Move the fulcrum and you change the entire system.
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- MANIFESTO -->
-  <div class="manifesto">
-    <p class="manifesto-quote">"We don't predict the future. We <em>probe</em> it — building small things that make it briefly, uncomfortably visible."</p>
-    <span class="manifesto-attr">Good Evil Club · About</span>
-  </div>
-
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-logo">Good <em>Evil</em> Club</div>
-    <div class="footer-links">
-      <a onclick="showPage('home')">Applications</a>
-      <a onclick="showPage('about')">About</a>
-      <a href="https://medium.com" target="_blank">Medium</a>
-    </div>
-    <a href="mailto:signal@goodevil.club" class="footer-mail">signal@goodevil.club</a>
-  </footer>
-
-</div><!-- /page-about -->
-
 <script>
-  // Cursor
-  const cursor = document.getElementById('cursor');
-  document.addEventListener('mousemove', e => {
-    cursor.style.left = e.clientX + 'px';
-    cursor.style.top = e.clientY + 'px';
-  });
-  document.querySelectorAll('a, button, .app-card, .cart-card, .nav-logo').forEach(el => {
-    el.addEventListener('mouseenter', () => cursor.classList.add('expanded'));
-    el.addEventListener('mouseleave', () => cursor.classList.remove('expanded'));
+/* cursor */
+const cur = document.getElementById('cur');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px';
+  cur.style.top = e.clientY + 'px';
+});
+document.querySelectorAll('a, button, .prov').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('big'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+});
+
+/* clock */
+function tick() {
+  const el = document.getElementById('clk');
+  if (el) el.textContent = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'}) + ' CET';
+}
+tick(); setInterval(tick, 10000);
+
+/* page toggle */
+function show(v) {
+  document.getElementById('home').style.display    = v === 'home'    ? 'flex'  : 'none';
+  document.getElementById('contact').style.display = v === 'contact' ? 'block' : 'none';
+  document.getElementById('bp').className = 'npb' + (v === 'home'    ? ' on' : '');
+  document.getElementById('bc').className = 'npb' + (v === 'contact' ? ' on' : '');
+  if (v !== 'home') closePanel();
+}
+
+/* ── PROBE PANEL ── */
+const panel    = document.getElementById('probe-panel');
+const panelBg  = document.getElementById('probe-panel-bg');
+
+function openPanel(data) {
+  const nameEl = document.getElementById('pp-name');
+  const qEl    = document.getElementById('pp-question');
+  const whyEl  = document.getElementById('pp-why');
+  const whatEl = document.getElementById('pp-what');
+  const stEl   = document.getElementById('pp-stack');
+
+  nameEl.textContent  = data.name;
+  qEl.textContent     = data.question;
+  whyEl.textContent   = data.why;
+  whatEl.textContent  = data.what;
+  stEl.textContent    = data.stack;
+
+  /* force correct colors per element type */
+  nameEl.style.setProperty('color', 'rgba(255,255,255,1)', 'important');
+  qEl.style.setProperty('color', 'rgba(255,255,255,0.75)', 'important');
+  whyEl.style.setProperty('color', 'rgba(255,255,255,0.75)', 'important');
+  whatEl.style.setProperty('color', 'rgba(255,255,255,0.75)', 'important');
+  stEl.style.setProperty('color', 'rgba(255,255,255,0.4)', 'important');
+  document.querySelectorAll('.pp-section-label').forEach(el => {
+    el.style.setProperty('color', '#ffffff', 'important');
   });
 
-  // Page switching
-  function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active-link'));
-    const activeNav = document.getElementById('nav-' + name);
-    if (activeNav) activeNav.classList.add('active-link');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  document.getElementById('pp-builder').textContent = data.builder;
+  document.getElementById('pp-year').textContent    = data.year;
 
-  // Compass tick marks
-  const ring = document.getElementById('cr1');
-  for (let i = 0; i < 36; i++) {
-    const tick = document.createElement('div');
-    tick.className = 'compass-tick';
-    tick.style.height = i % 9 === 0 ? '20px' : '8px';
-    tick.style.top = i % 9 === 0 ? '-20px' : '-8px';
-    tick.style.left = '50%';
-    tick.style.transform = `rotate(${i * 10}deg)`;
-    ring.appendChild(tick);
-  }
+  const hero = document.getElementById('pp-hero');
+  hero.className = 'pp-hero ' + data.fill;
 
-  // Scroll reveal
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.style.animationPlayState = 'running'; });
-  }, { threshold: 0.08 });
-  document.querySelectorAll('.app-card, .cart-card, .about-hero-left, .about-hero-right').forEach(el => {
-    el.style.animationPlayState = 'paused';
-    observer.observe(el);
+  const tagsEl = document.getElementById('pp-tags');
+  tagsEl.innerHTML = data.tags.split(',')
+    .map(t => `<span class="pp-tag">${t.trim()}</span>`).join('');
+
+  panel.scrollTop = 0;
+
+  panel.classList.add('open');
+  document.body.classList.add('panel-open');
+  document.body.style.overflow = 'hidden';
+  panel.setAttribute('aria-hidden', 'false');
+}
+
+function closePanel() {
+  panel.classList.remove('open');
+  document.body.classList.remove('panel-open');
+  document.body.style.overflow = '';
+  panel.setAttribute('aria-hidden', 'true');
+}
+
+/* card clicks */
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('click', e => {
+    e.preventDefault();
+    openPanel({
+      name:     card.dataset.name,
+      fill:     card.dataset.fill,
+      tags:     card.dataset.tags,
+      year:     card.dataset.year,
+      builder:  card.dataset.builder,
+      question: card.dataset.question,
+      why:      card.dataset.why,
+      what:     card.dataset.what,
+      stack:    card.dataset.stack,
+    });
   });
+});
+
+/* close button */
+document.getElementById('pp-close').addEventListener('click', closePanel);
+
+/* click on backdrop closes panel */
+panelBg.addEventListener('click', closePanel);
+
+/* ESC key */
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+/* left dim closes panel */
+document.getElementById('left-dim').addEventListener('click', closePanel);
 </script>
 </body>
 </html>
