@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm v10+ blocks dependency build scripts by default. esbuild (used by Vite)
+# needs its postinstall to fetch its native binary, so allow it explicitly.
+allowBuilds:
+  esbuild: true
+
+# @anthropic-ai/sdk 0.103.0 is newer than pnpm's default minimum-release-age
+# gate; allow it through (we deliberately pinned the current SDK).
+minimumReleaseAgeExclude:
+  - "@anthropic-ai/sdk@0.103.0"

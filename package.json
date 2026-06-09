@@ -1,0 +1,12 @@
+{
+  "name": "goodevil",
+  "private": true,
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "dev": "pnpm --filter ./apps/simulator dev",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
