@@ -434,6 +434,10 @@ function P({ children }) { return <p className="re-reason">{children}</p>; }
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+/* The shared @goodevil/ui tokens hide the native cursor (the homepage draws
+   its own custom dot). This probe has no custom cursor, so bring the real
+   one back — buttons/nodes still get their own pointer/grab cursors below. */
+html, body { cursor: auto; }
 .re-root{
   --bg:#14100E; --panel:#1E1916; --canvas:#F6F1E7; --grid:#E7DECC;
   --card:#FFFFFF; --ink:#23201C; --muted:#8A8175; --line:#3A342E; --hair:#C9BFAD;
