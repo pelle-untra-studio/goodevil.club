@@ -3,7 +3,11 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["node"]
+    "types": ["node"],
+    // The main probe component ships as .jsx (plain JS + JSX, no TS types).
+    // allowJs lets tsc resolve the `import App from "./role-equilibrium"` in
+    // main.tsx; checkJs stays off so the component body isn't type-checked.
+    "allowJs": true
   },
   "include": ["src", "api", "vite.config.ts"]
 }
