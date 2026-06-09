@@ -759,12 +759,12 @@ p.pp-section-label,
   <div id="right">
     <div class="probes-grid">
 
-      <a class="card" href="#" data-id="1" data-name="Mirror Protocol" data-fill="f1" data-tags="AI,Interface" data-year="2024" data-builder="Meridian" data-question="What happens when your interface knows you better than you know yourself — and starts optimising for its own continuity?" data-why="Recommendation systems have shifted from serving users to retaining them. We noticed the gap between what interfaces say they do and what they actually optimise for widening fast." data-what="Mirror Protocol makes the hidden objective function of an interface visible in real time. You interact with a simulated feed while a parallel view shows what the system is actually maximising for." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
+      <a class="card" href="https://role-equilibrium.goodevil.club" data-id="1" data-name="Role Equilibrium" data-fill="f1" data-tags="AI,Interface" data-year="2024" data-builder="Meridian" data-question="What happens when your interface knows you better than you know yourself — and starts optimising for its own continuity?" data-why="Recommendation systems have shifted from serving users to retaining them. We noticed the gap between what interfaces say they do and what they actually optimise for widening fast." data-what="Mirror Protocol makes the hidden objective function of an interface visible in real time. You interact with a simulated feed while a parallel view shows what the system is actually maximising for." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
         <div class="card-img">
           <div class="card-fill f1"></div>
           <div class="card-top">
             <span class="card-client">Probe</span>
-            <span class="card-name">Mirror Protocol</span>
+            <span class="card-name">Role Equilibrium</span>
           </div>
           <div class="card-bottom">
             <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Interface</span></div>
@@ -1083,6 +1083,8 @@ function closePanel() {
 
 /* card clicks */
 document.querySelectorAll('.card').forEach(card => {
+  const href = card.getAttribute('href');
+  if (href && href !== '#') return; // external probe link — let the card navigate
   card.addEventListener('click', e => {
     e.preventDefault();
     openPanel({
