@@ -1,0 +1,26 @@
+{
+  "name": "blast-radius",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm --filter @goodevil/claude build && tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@goodevil/claude": "workspace:*",
+    "@goodevil/ui": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vercel/node": "^5",
+    "@vitejs/plugin-react": "^6",
+    "typescript": "^5.5.0",
+    "vite": "^8"
+  }
+}
