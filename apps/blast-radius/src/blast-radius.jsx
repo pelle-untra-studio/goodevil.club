@@ -124,17 +124,23 @@ function layoutProcess(steps, edges, W = VBW, H = VBH) {
   const groups = {};
   ids.forEach((i) => { (groups[depth[i]] = groups[depth[i]] || []).push(i); });
 
+  // Nodes are 144 wide; guarantee at least 160 of column spacing so they can
+  // never overlap. Short chains spread across the base width, long chains
+  // grow the viewBox instead (the SVG scales down to fit its container).
+  const MARGIN = 84; // half a node + edge padding
+  const spacing = maxD > 0 ? Math.max(160, (W - 2 * MARGIN) / maxD) : 0;
+  const vbw = maxD > 0 ? Math.max(W, 2 * MARGIN + maxD * spacing) : W;
+
   const pos = {};
-  const colW = W / (maxD + 2);
   Object.keys(groups).forEach((d) => {
     const col = groups[d];
     col.forEach((id, k) => {
-      const x = colW * (Number(d) + 1);
+      const x = maxD > 0 ? MARGIN + Number(d) * spacing : vbw / 2;
       const y = H * ((k + 1) / (col.length + 1));
       pos[id] = { x, y };
     });
   });
-  return { pos, depth };
+  return { pos, depth, vbw };
 }
 
 // --- Local diagnostics -----------------------------------------------------
@@ -208,7 +214,7 @@ export default function BlastRadius() {
   const payrollConsumes = pay.consumes.some((c) => norm(c) === norm(onb.produces.name));
   const affected = addedFields.length > 0 && payrollConsumes && !pay.patched;
 
-  const { pos } = useMemo(() => layoutProcess(proc.steps, proc.edges), [proc]);
+  const { pos, vbw } = useMemo(() => layoutProcess(proc.steps, proc.edges), [proc]);
   const diag = useMemo(() => diagnose(proc.steps, proc.edges), [proc]);
 
   // --- work token engine ---------------------------------------------------
@@ -331,11 +337,15 @@ export default function BlastRadius() {
     const maxN = proc.steps.reduce((m, s) => Math.max(m, Number(String(s.id).replace(/\D/g, "")) || 0), 0);
     const nid = prefix + (maxN + 1);
     const lastId = proc.steps.length ? proc.steps[proc.steps.length - 1].id : null;
-    setProc((p) => ({
-      ...p,
-      steps: [...p.steps, { id: nid, label: "New step", owner: "human", latency: 1, cost: 1, added: true }],
-      edges: lastId ? [...p.edges, { from: lastId, to: nid }] : p.edges,
-    }));
+    setProc((p) => {
+      // a burst of clicks can race the re-render; drop adds with a stale id
+      if (p.steps.some((s) => s.id === nid)) return p;
+      return {
+        ...p,
+        steps: [...p.steps, { id: nid, label: "New step", owner: "human", latency: 1, cost: 1, added: true }],
+        edges: lastId ? [...p.edges, { from: lastId, to: nid }] : p.edges,
+      };
+    });
     setSelStep(nid);
     setRun(null);
   };
@@ -439,7 +449,7 @@ export default function BlastRadius() {
             </div>
           </div>
 
-          <svg ref={svgRef} viewBox={`0 0 ${VBW} ${VBH}`} className="br-canvas" preserveAspectRatio="xMidYMid meet">
+          <svg ref={svgRef} viewBox={`0 0 ${vbw} ${VBH}`} className="br-canvas" preserveAspectRatio="xMidYMid meet">
             <defs>
               <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
                 <path d="M 26 0 L 0 0 0 26" fill="none" stroke="var(--grid)" strokeWidth="1" />
@@ -448,7 +458,7 @@ export default function BlastRadius() {
                 <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="var(--line)" strokeWidth="1.6" />
               </marker>
             </defs>
-            <rect x="0" y="0" width={VBW} height={VBH} fill="url(#grid)" />
+            <rect x="0" y="0" width={vbw} height={VBH} fill="url(#grid)" />
 
             {proc.edges.map((e, i) => {
               const g = edgePath(e);
@@ -458,7 +468,7 @@ export default function BlastRadius() {
                   <path d={g.d} fill="none" stroke={g.back ? "var(--accent)" : "var(--line)"}
                     strokeWidth="1.5" strokeDasharray={g.back ? "5 5" : "none"} markerEnd="url(#arrow)" opacity="0.7" />
                   {e.gate && (
-                    <g transform={`translate(${g.lx} ${g.ly})`}>
+                    <g transform={`translate(${g.lx} ${g.ly + (g.back ? 0 : 40)})`}>
                       <rect x="-30" y="-9" width="60" height="18" rx="9" fill="var(--canvas)" stroke="var(--gate)" strokeWidth="1.2" />
                       <text textAnchor="middle" y="3.5" className="br-gate-label">sign-off</text>
                     </g>
@@ -479,9 +489,9 @@ export default function BlastRadius() {
                   <rect width="144" height="54" rx="9" fill="var(--card)"
                     stroke={isSel ? "var(--ink)" : isBottle ? "var(--gate)" : "var(--hair)"} strokeWidth={isSel || isBottle ? 2.2 : 1.2} />
                   <rect x="0" y="0" width="5" height="54" rx="2.5" fill={c} />
-                  <text x="14" y="22" className="br-node-title">{s.label.length > 22 ? s.label.slice(0, 21) + "…" : s.label}</text>
+                  <text x="14" y="22" className="br-node-title">{s.label.length > 19 ? s.label.slice(0, 18) + "…" : s.label}</text>
                   <text x="14" y="40" className="br-node-meta">{OWNERS[s.owner].label} · {s.latency || 1}d{s.added ? " · new" : ""}</text>
-                  {isBottle && <text x="130" y="22" textAnchor="end" className="br-node-bottle">slow</text>}
+                  {isBottle && <text x="138" y="-8" textAnchor="end" className="br-node-bottle">slow</text>}
                 </g>
               );
             })}
