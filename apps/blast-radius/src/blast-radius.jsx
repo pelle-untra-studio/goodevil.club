@@ -323,6 +323,41 @@ export default function BlastRadius() {
   const updateStep = (id, patch) => setProc((p) => ({ ...p, steps: p.steps.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
   const selectedStep = proc.steps.find((s) => s.id === selStep);
 
+  // Append a step, wired from the current last step, and open it for editing.
+  // Ids use the process prefix + (max numeric suffix + 1) so deletions never
+  // cause collisions.
+  const addStep = () => {
+    const prefix = proc.id === "onboarding" ? "s" : "p";
+    const maxN = proc.steps.reduce((m, s) => Math.max(m, Number(String(s.id).replace(/\D/g, "")) || 0), 0);
+    const nid = prefix + (maxN + 1);
+    const lastId = proc.steps.length ? proc.steps[proc.steps.length - 1].id : null;
+    setProc((p) => ({
+      ...p,
+      steps: [...p.steps, { id: nid, label: "New step", owner: "human", latency: 1, cost: 1, added: true }],
+      edges: lastId ? [...p.edges, { from: lastId, to: nid }] : p.edges,
+    }));
+    setSelStep(nid);
+    setRun(null);
+  };
+
+  // Remove a step and splice its predecessors to its successors so the flow
+  // stays contiguous instead of breaking into dead ends.
+  const removeStep = (id) => {
+    setProc((p) => {
+      if (p.steps.length <= 1) return p;
+      const preds = p.edges.filter((e) => e.to === id).map((e) => e.from);
+      const succs = p.edges.filter((e) => e.from === id).map((e) => e.to);
+      const kept = p.edges.filter((e) => e.from !== id && e.to !== id);
+      const splice = [];
+      preds.forEach((a) => succs.forEach((b) => {
+        if (a !== b && !kept.some((e) => e.from === a && e.to === b)) splice.push({ from: a, to: b });
+      }));
+      return { ...p, steps: p.steps.filter((s) => s.id !== id), edges: [...kept, ...splice] };
+    });
+    setSelStep(null);
+    setRun(null);
+  };
+
   // --- edge geometry -------------------------------------------------------
   const edgePath = (e) => {
     const a = pos[e.from], b = pos[e.to];
@@ -400,6 +435,7 @@ export default function BlastRadius() {
               {Object.entries(OWNERS).map(([k, v]) => (
                 <span key={k}><i className="sw" style={{ background: v.color }} />{v.label}</span>
               ))}
+              <button className="btn small add-step" onClick={addStep}>+ Add step</button>
             </div>
           </div>
 
@@ -541,6 +577,8 @@ export default function BlastRadius() {
               <span className="br-range-val">{selectedStep.latency || 1} days</span>
               <p className="br-tip">Owner tags are one lens. The subject is how this step's output feeds the next, and which downstream processes depend on it.</p>
               <button className="btn ghost wide" onClick={() => setSelStep(null)}>Done</button>
+              <button className="btn ghost wide danger" onClick={() => removeStep(selectedStep.id)}
+                disabled={proc.steps.length <= 1}>Remove step</button>
             </div>
           ) : (
             <div className="br-inner">
@@ -606,6 +644,10 @@ function P({ children }) { return <p className="br-reason">{children}</p>; }
 // refactoring styling now — left in place verbatim from the prototype.
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+/* The shared @goodevil/ui tokens hide the native cursor (the homepage draws
+   its own custom dot). This probe has no custom cursor, so bring the real
+   one back — buttons/nodes still get their own pointer cursors below. */
+html, body { cursor: auto; }
 .br-root{
   --bg:#14100E; --panel:#1E1916; --canvas:#F6F1E7; --grid:#E7DECC;
   --card:#FFFFFF; --ink:#23201C; --muted:#8A8175; --line:#3A342E; --hair:#C9BFAD;
@@ -629,6 +671,10 @@ const CSS = `
 .btn.demo{border-color:var(--teal); color:#7fd6c6;}
 .btn.small{font-size:12px; padding:7px 11px; margin-top:8px;}
 .btn.wide{width:100%; margin-top:10px; padding:12px;}
+.btn.add-step{margin-top:0; border-color:var(--hair); color:var(--ink);}
+.btn.add-step:hover{border-color:var(--ink);}
+.btn.danger{border-color:#5a3026; color:#f2b6a6;}
+.btn.danger:hover{border-color:var(--accent);}
 .br-err{background:#3a201a; border:1px solid var(--accent); color:#f3c9bd; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px;}
 
 .br-system{background:var(--panel); border:1px solid #2a2521; border-radius:14px; padding:16px 18px; margin-bottom:16px;}
