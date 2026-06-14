@@ -759,16 +759,16 @@ p.pp-section-label,
   <div id="right">
     <div class="probes-grid">
 
-      <a class="card" href="#" data-id="1" data-name="Mirror Protocol" data-fill="f1" data-tags="AI,Interface" data-year="2024" data-builder="Meridian" data-question="What happens when your interface knows you better than you know yourself — and starts optimising for its own continuity?" data-why="Recommendation systems have shifted from serving users to retaining them. We noticed the gap between what interfaces say they do and what they actually optimise for widening fast." data-what="Mirror Protocol makes the hidden objective function of an interface visible in real time. You interact with a simulated feed while a parallel view shows what the system is actually maximising for." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
+      <a class="card" href="#" data-id="1" data-name="Role Equilibrium" data-fill="f1" data-url="https://role-equilibrium.goodevil.club" data-tags="Org Design,Tool" data-year="2026" data-builder="Meridian" data-question="What happens to every other job description the moment one new person joins — and who decides what they no longer own?" data-why="Job descriptions are written as if each role stands alone. In reality they sit in tension — shared, adjacent and dependent work — so every new hire quietly forces several rewrites that nobody owns." data-what="Role Equilibrium maps an organisation as a living system of contested, dependent and orphaned responsibilities. Add someone new and Claude works out what migrates, what newly overlaps, and which descriptions have to be rewritten." data-stack="Claude API · Claude Sonnet 4.6 · React · SVG">
         <div class="card-img">
           <div class="card-fill f1"></div>
           <div class="card-top">
             <span class="card-client">Probe</span>
-            <span class="card-name">Mirror Protocol</span>
+            <span class="card-name">Role Equilibrium</span>
           </div>
           <div class="card-bottom">
-            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Interface</span></div>
-            <span class="card-year">2024</span>
+            <div class="card-tags"><span class="card-tag">Org Design</span><span class="card-tag">Tool</span></div>
+            <span class="card-year">2026</span>
           </div>
         </div>
       </a>
@@ -971,7 +971,7 @@ p.pp-section-label,
       </div>
 
       <div class="pp-actions">
-        <a class="pp-btn pp-btn-secondary" href="#">Try the application →</a>
+        <a class="pp-btn pp-btn-secondary" id="pp-try" href="#" target="_blank" rel="noopener">Try the application →</a>
       </div>
 
       <div class="pp-meta">
@@ -1066,6 +1066,16 @@ function openPanel(data) {
   tagsEl.innerHTML = data.tags.split(',')
     .map(t => `<span class="pp-tag">${t.trim()}</span>`).join('');
 
+  /* "Try the application" — only real probes carry a url */
+  const tryEl = document.getElementById('pp-try');
+  if (data.url) {
+    tryEl.href = data.url;
+    tryEl.setAttribute('target', '_blank');
+  } else {
+    tryEl.href = '#';
+    tryEl.removeAttribute('target');
+  }
+
   panel.scrollTop = 0;
 
   panel.classList.add('open');
@@ -1095,6 +1105,7 @@ document.querySelectorAll('.card').forEach(card => {
       why:      card.dataset.why,
       what:     card.dataset.what,
       stack:    card.dataset.stack,
+      url:      card.dataset.url,
     });
   });
 });
