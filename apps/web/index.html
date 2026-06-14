@@ -441,16 +441,9 @@ body.panel-open {
 
 /* semi-transparent backdrop — sits over the right grid only */
 #probe-panel-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  z-index: 499;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 300ms ease;
-  height: 220px;
-  top: var(--nav-h);
-  bottom: auto;
+  /* removed: this 220px semi-transparent band sat on top of .pp-hero
+     and created a dark horizontal seam across the gradient */
+  display: none;
 }
 #probe-panel.open ~ * { pointer-events: none; }
 body.panel-open #probe-panel-bg {
@@ -563,9 +556,9 @@ p.pp-section-label,
 }
 .pp-btn-primary:hover { }
 .pp-btn-secondary {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 1px solid #ffffff;
 }
 .pp-btn-secondary:hover { }
 
@@ -611,9 +604,41 @@ p.pp-section-label,
 .pp-hero.f12 { background: linear-gradient(135deg, #2a3a1a, #0d1208); }
 .pp-hero.f13 { background: linear-gradient(135deg, #3a2a5a, #0d0a1a); }
 
-/* mobile: full screen */
+/* mobile: stack the split layout into a single scrolling column */
 @media (max-width: 768px) {
-  #probe-panel { width: 100%; }
+  html, body { height: auto; overflow-y: auto; cursor: auto; }
+  #cur { display: none; }
+
+  #home { flex-direction: column; height: auto; }
+
+  #left {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 32px 24px 40px;
+    overflow: visible;
+  }
+  .about-h { margin-bottom: 28px; }
+  .about-stats { margin-bottom: 0; }
+
+  #right {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* full-screen panel on mobile */
+  #probe-panel {
+    width: 100%;
+    top: 0;
+    height: 100vh;
+  }
+  .pp-hero { height: 160px; }
+
+  /* keep content clear of the floating nav pill */
+  .probes-grid { padding-bottom: 96px; }
+  #contact-inner { padding-bottom: 120px; }
 }
 
 /* Nav pill buttons */
@@ -649,16 +674,15 @@ p.pp-section-label,
   border-color: #35D0F2 !important;
 }
 
-/* Read the dispatch — secondary button */
+/* inverted secondary button — solid white, dark text */
 .pp-btn-secondary {
   cursor: pointer;
-  transition: color .2s ease, border-bottom .2s ease;
-  border-bottom: 1px solid transparent;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
 }
 .pp-btn-secondary:hover {
-  color: #ffffff !important;
-  border-bottom: 1px solid #ffffff;
-  border-color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.82) !important;
+  color: #0a0a0a !important;
+  border-color: rgba(255,255,255,.82) !important;
 }
 #probe-panel-inner {
   --muted: #ffffff;
@@ -673,7 +697,7 @@ p.pp-section-label,
 #probe-panel-inner .pp-builder strong { color: rgba(255,255,255,1) !important; }
 #probe-panel-inner .pp-tag           { color: rgba(255,255,255,0.75) !important; }
 #probe-panel-inner .pp-year          { color: rgba(255,255,255,0.4) !important; }
-#probe-panel-inner .pp-btn-secondary { color: rgba(255,255,255,0.75) !important; }
+#probe-panel-inner .pp-btn-secondary { color: #0a0a0a !important; }
 #probe-panel-inner .pp-close         { color: rgba(255,255,255,0.5) !important; }
 </style>
 </head>
@@ -737,16 +761,16 @@ p.pp-section-label,
   <div id="right">
     <div class="probes-grid">
 
-      <a class="card" href="#" data-id="1" data-name="Mirror Protocol" data-fill="f1" data-tags="AI,Interface" data-year="2024" data-builder="Meridian" data-question="What happens when your interface knows you better than you know yourself — and starts optimising for its own continuity?" data-why="Recommendation systems have shifted from serving users to retaining them. We noticed the gap between what interfaces say they do and what they actually optimise for widening fast." data-what="Mirror Protocol makes the hidden objective function of an interface visible in real time. You interact with a simulated feed while a parallel view shows what the system is actually maximising for." data-stack="Claude API · Claude Sonnet 4 · React · D3.js">
+      <a class="card" href="#" data-id="1" data-name="Role Equilibrium" data-fill="f1" data-url="https://role-equilibrium.goodevil.club" data-tags="Org Design,Tool" data-year="2026" data-builder="Meridian" data-question="What happens to every other job description the moment one new person joins — and who decides what they no longer own?" data-why="Job descriptions are written as if each role stands alone. In reality they sit in tension — shared, adjacent and dependent work — so every new hire quietly forces several rewrites that nobody owns." data-what="Role Equilibrium maps an organisation as a living system of contested, dependent and orphaned responsibilities. Add someone new and Claude works out what migrates, what newly overlaps, and which descriptions have to be rewritten." data-stack="Claude API · Claude Sonnet 4.6 · React · SVG">
         <div class="card-img">
           <div class="card-fill f1"></div>
           <div class="card-top">
             <span class="card-client">Probe</span>
-            <span class="card-name">Mirror Protocol</span>
+            <span class="card-name">Role Equilibrium</span>
           </div>
           <div class="card-bottom">
-            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Interface</span></div>
-            <span class="card-year">2024</span>
+            <div class="card-tags"><span class="card-tag">Org Design</span><span class="card-tag">Tool</span></div>
+            <span class="card-year">2026</span>
           </div>
         </div>
       </a>
@@ -963,7 +987,7 @@ p.pp-section-label,
       </div>
 
       <div class="pp-actions">
-        <a class="pp-btn pp-btn-secondary" id="pp-url" href="#" target="_blank" rel="noopener">Try the application →</a>
+        <a class="pp-btn pp-btn-secondary" id="pp-try" href="#" target="_blank" rel="noopener">Try the application →</a>
       </div>
 
       <div class="pp-meta">
@@ -1051,15 +1075,22 @@ function openPanel(data) {
   document.getElementById('pp-builder').textContent = data.builder;
   document.getElementById('pp-year').textContent    = data.year;
 
-  const urlEl = document.getElementById('pp-url');
-  if (urlEl) urlEl.href = data.url || '#';
-
   const hero = document.getElementById('pp-hero');
   hero.className = 'pp-hero ' + data.fill;
 
   const tagsEl = document.getElementById('pp-tags');
   tagsEl.innerHTML = data.tags.split(',')
     .map(t => `<span class="pp-tag">${t.trim()}</span>`).join('');
+
+  /* "Try the application" — only real probes carry a url */
+  const tryEl = document.getElementById('pp-try');
+  if (data.url) {
+    tryEl.href = data.url;
+    tryEl.setAttribute('target', '_blank');
+  } else {
+    tryEl.href = '#';
+    tryEl.removeAttribute('target');
+  }
 
   panel.scrollTop = 0;
 
