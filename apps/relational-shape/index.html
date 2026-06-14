@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relational Shape Model — Good Evil Club</title>
+  <meta name="description" content="The Relational Shape Model by Anna Gee Gyllenklev — a Good Evil Club probe." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg: #0d0a1a; --fg: #ffffff; --dim: #9a93b0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: radial-gradient(circle at 50% 35%, #3a2a5a, #0d0a1a 70%);
+      color: var(--fg);
+      font-family: 'Syne', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px;
+      gap: 24px;
+    }
+    .label { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
+    h1 { font-size: clamp(40px, 8vw, 88px); font-weight: 800; line-height: 1.02; max-width: 12ch; }
+    p { color: var(--dim); max-width: 46ch; line-height: 1.6; font-size: 16px; }
+    .status { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg); border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 10px 20px; }
+    a.back { color: var(--dim); text-decoration: none; font-size: 14px; border-bottom: 1px solid transparent; transition: border-color .2s; }
+    a.back:hover { border-color: var(--dim); }
+  </style>
+</head>
+<body>
+  <span class="label">Good Evil Club · Probe</span>
+  <h1>Relational Shape Model</h1>
+  <p>An everyday object is not a thing, but a field of relations you can learn to see. Name any object and pass through three moments — lived, made, and given.</p>
+  <span class="status">Coming soon</span>
+  <p style="font-size:13px">By Anna Gee Gyllenklev</p>
+  <a class="back" href="https://goodevil.club">← goodevil.club</a>
+</body>
+</html>
