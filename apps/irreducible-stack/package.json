@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm --filter @goodevil/claude build && tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npx -y tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@goodevil/claude": "workspace:*",
