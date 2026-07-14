@@ -64,7 +64,7 @@ export default function IrreducibleStackV2() {
 
       <header className="v2-head">
         <div>
-          <span className="v2-kicker">Good Evil Club · probe · v2 preview</span>
+          <span className="v2-kicker">Good Evil Club · probe</span>
           <h1>The Irreducible Stack</h1>
         </div>
         <label className="v2-tmpl">
