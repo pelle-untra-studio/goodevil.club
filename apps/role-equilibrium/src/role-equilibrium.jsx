@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 // Client helper, same as the simulator: posts a messages array to /api/claude
 // and returns text. The Anthropic key stays server side.
 import { askClaude } from "./askClaude";
+import { COMPANIES, loadConfig, normRole } from "./config";
 
 /*
   ROLE EQUILIBRIUM  ·  a Good Evil Club probe
@@ -11,10 +12,9 @@ import { askClaude } from "./askClaude";
   makes that one moment unmissable: change a role, watch the ripple,
   read the drafted notifications each affected person would receive.
 
-  AI is used for three things, each with a pre written fallback so a
-  live demo never breaks: personalized change notifications, the
-  overlap and gap analysis, and rebalancing suggestions when a role
-  is added. Everything reaches the ripple within a few seconds.
+  Every organization specific thing lives in a validated config (see
+  config.js). This file is the engine: it reads only from a normalized
+  config, so a new company is a new config, not new code.
 */
 
 // ---------------------------------------------------------------- helpers ---
@@ -26,292 +26,48 @@ function parseJSON(text) {
   return JSON.parse(clean.slice(start, end + 1));
 }
 
-const DEPTS = {
-  Leadership: "#E4B23C",
-  Product: "#6C8CFF",
-  Engineering: "#35B597",
-  Sales: "#E5643C",
-  "Customer Success": "#B06CE0",
-  Operations: "#8C99A6",
+const byId = (roles, id) => roles.find((r) => r.id === id);
+const domainColor = (cfg, id) => (cfg._domainById[id] || {}).color || "#8C99A6";
+const domainName = (cfg, id) => (cfg._domainById[id] || {}).name || id;
+const etype = (cfg, id) =>
+  cfg._edgeTypeById[id] || { id, label: id, stroke: "#8C8375", width: 1.5, dash: "none", arrow: false, opacity: 1, legendColor: "#8C8375", legendWidth: 2, conn: id };
+const nameOf = (r) => (r.people && r.people.length ? r.people[0] : r.person || "");
+const nameLabel = (r) => {
+  const p = r.people || (r.person ? [r.person] : []);
+  if (!p.length) return "";
+  return p.length > 1 ? `${p[0]} +${p.length - 1}` : p[0];
 };
 
-// Shorter labels for the map so long titles do not clip on a projector.
-// The full title still shows in the role panel and personal view.
-const SHORT_TITLE = {
-  head_cs: "Head of CS",
-  eng_mgr: "Eng Manager",
-  ae: "Account Exec",
-  sales_ops: "Sales Ops Analyst",
-  csm: "CS Manager",
-  ops_mgr: "Ops Manager",
-};
+// Load every company config once, up front, with plain language errors.
+const LOADED = {};
+COMPANIES.forEach((raw) => { LOADED[raw.id] = { id: raw.id, name: raw.name, kind: raw.kind, ...loadConfig(raw) }; });
+const COMPANY_LIST = COMPANIES.map((raw) => ({ id: raw.id, name: raw.name, kind: raw.kind }));
+const FIRST_OK = (COMPANY_LIST.find((c) => LOADED[c.id].ok) || COMPANY_LIST[0]).id;
 
-// ------------------------------------------------------------- seed roles ---
-// x,y are layout coordinates in the map viewBox (1520 x 860).
-const SEED_ROLES = [
-  { id: "ceo", title: "CEO", person: "Astrid Ek", dept: "Leadership", x: 760, y: 92,
-    purpose: "Sets company direction and owns the executive team.",
-    resp: ["Company strategy", "Executive hiring", "Board relationship", "Capital allocation", "Culture"],
-    mandates: ["Final say on annual budget", "Approve executive hires"] },
+// apply a scenario to a config's clean base, returning the next roles + edges
+function applyScenario(cfg, sc) {
+  let roles = cfg.roles.map((r) => ({ ...r, resp: [...r.resp], mandates: [...r.mandates], people: [...(r.people || [])] }));
+  let edges = cfg.edges.map((e) => ({ ...e }));
 
-  { id: "vp_product", title: "VP Product", person: "Johan Nystrom", dept: "Product", x: 210, y: 272,
-    purpose: "Owns what the company builds and why.",
-    resp: ["Product strategy", "Roadmap", "AI feature roadmap", "Pricing input", "Discovery"],
-    mandates: ["Approve the roadmap", "Prioritize releases"] },
-
-  { id: "vp_eng", title: "VP Engineering", person: "Priya Rao", dept: "Engineering", x: 520, y: 272,
-    purpose: "Owns how the product is built and shipped.",
-    resp: ["Engineering strategy", "Architecture", "Delivery", "Hiring engineers", "Security"],
-    mandates: ["Approve model deployments", "Approve technical standards"] },
-
-  { id: "head_sales", title: "Head of Sales", person: "Erik Lund", dept: "Sales", x: 760, y: 272,
-    purpose: "Owns revenue and the sales team.",
-    resp: ["Sales strategy", "Pipeline", "Forecasting", "Key accounts", "Partnerships"],
-    mandates: ["Approve pricing exceptions", "Own list price and discount policy"] },
-
-  { id: "head_cs", title: "Head of Customer Success", person: "Sofia Berg", dept: "Customer Success", x: 1060, y: 272,
-    purpose: "Owns customer retention and expansion.",
-    resp: ["Retention", "Expansion", "Onboarding", "Customer health", "Advocacy"],
-    mandates: ["Approve save offers", "Set health scoring"] },
-
-  { id: "head_ops", title: "Head of Operations", person: "Markus Holm", dept: "Operations", x: 1350, y: 272,
-    purpose: "Owns internal operations and vendors.",
-    resp: ["Operations", "Vendor onboarding", "Vendor contracts", "Tooling", "Facilities"],
-    mandates: ["Approve vendor spend", "Own procurement policy"] },
-
-  { id: "pm", title: "Product Manager", person: "Lena Falk", dept: "Product", x: 120, y: 502,
-    purpose: "Turns strategy into shipped product.",
-    resp: ["Requirements", "Backlog", "Release notes", "Customer interviews", "Metrics"],
-    mandates: ["Prioritize the backlog"] },
-
-  { id: "designer", title: "Product Designer", person: "Oskar Vik", dept: "Product", x: 296, y: 502,
-    purpose: "Owns the product experience.",
-    resp: ["UX flows", "Visual design", "Prototypes", "Design system"],
-    mandates: ["Approve final design"] },
-
-  { id: "eng_mgr", title: "Engineering Manager", person: "David Sund", dept: "Engineering", x: 472, y: 502,
-    purpose: "Runs the engineering team day to day.",
-    resp: ["Sprint planning", "Code review", "Delivery", "One on ones", "Incident response"],
-    mandates: ["Approve production releases"] },
-
-  { id: "senior_eng", title: "Senior Engineer", person: "Nina Ali", dept: "Engineering", x: 472, y: 700,
-    purpose: "Builds core systems.",
-    resp: ["Implementation", "Architecture input", "Model evaluation", "Code review", "Mentoring"],
-    mandates: ["Approve merges to main"] },
-
-  { id: "ae", title: "Account Executive", person: "Tomas Ek", dept: "Sales", x: 648, y: 502,
-    purpose: "Closes new business.",
-    resp: ["Prospecting", "Demos", "Negotiation", "Closing", "Handoff to Customer Success"],
-    mandates: ["Commit deal terms within policy"] },
-
-  { id: "sales_ops", title: "Sales Operations Analyst", person: "Hanna Ek", dept: "Sales", x: 824, y: 502,
-    purpose: "Keeps the sales engine running.",
-    resp: ["Pipeline hygiene", "Reporting", "Deal desk", "Quota tracking"],
-    mandates: ["Approve pricing exceptions", "Own CRM data quality"] },
-
-  { id: "csm", title: "Customer Success Manager", person: "Maja Lind", dept: "Customer Success", x: 1000, y: 502,
-    purpose: "Owns a book of customers after the sale.",
-    resp: ["Onboarding", "Adoption", "Quarterly reviews", "Renewal prep", "Escalation triage"],
-    mandates: ["Own the renewal recommendation"] },
-
-  { id: "support_lead", title: "Support Lead", person: "Felix Strom", dept: "Customer Success", x: 1176, y: 502,
-    purpose: "Owns customer support quality.",
-    resp: ["Ticket triage", "Service levels", "Escalations", "Knowledge base"],
-    mandates: ["Set support priority"] },
-
-  { id: "ops_mgr", title: "Operations Manager", person: "Ida Nilsson", dept: "Operations", x: 1352, y: 502,
-    purpose: "Runs operations day to day.",
-    resp: ["Vendor onboarding", "Contract tracking", "Tooling admin", "Reporting"],
-    mandates: ["Approve tooling under budget"] },
-];
-
-// from = subordinate or source, to = manager or target
-const SEED_EDGES = [
-  // reporting lines
-  { from: "vp_product", to: "ceo", type: "reports" },
-  { from: "vp_eng", to: "ceo", type: "reports" },
-  { from: "head_sales", to: "ceo", type: "reports" },
-  { from: "head_cs", to: "ceo", type: "reports" },
-  { from: "head_ops", to: "ceo", type: "reports" },
-  { from: "pm", to: "vp_product", type: "reports" },
-  { from: "designer", to: "vp_product", type: "reports" },
-  { from: "eng_mgr", to: "vp_eng", type: "reports" },
-  { from: "senior_eng", to: "eng_mgr", type: "reports" },
-  { from: "ae", to: "head_sales", type: "reports" },
-  { from: "sales_ops", to: "head_sales", type: "reports" },
-  { from: "csm", to: "head_cs", type: "reports" },
-  { from: "support_lead", to: "head_cs", type: "reports" },
-  { from: "ops_mgr", to: "head_ops", type: "reports" },
-  // handoffs
-  { from: "ae", to: "csm", type: "handoff", label: "deal handoff" },
-  { from: "pm", to: "eng_mgr", type: "handoff", label: "spec handoff" },
-  // dependencies
-  { from: "pm", to: "senior_eng", type: "dependency", label: "feasibility" },
-  { from: "csm", to: "pm", type: "dependency", label: "product feedback" },
-  { from: "designer", to: "pm", type: "dependency", label: "decisions" },
-  { from: "ae", to: "sales_ops", type: "dependency", label: "deal desk" },
-  { from: "ops_mgr", to: "vp_eng", type: "dependency", label: "tooling" },
-  // shared mandate (the deliberate overlap)
-  { from: "head_sales", to: "sales_ops", type: "shared", label: "pricing exceptions" },
-];
-
-const EDGE_STYLE = {
-  reports: { stroke: "#4b4640", width: 1.3, dash: "none", arrow: "arrow-reports", opacity: 0.6 },
-  handoff: { stroke: "#E5643C", width: 2, dash: "none", arrow: "arrow-handoff", opacity: 0.95 },
-  dependency: { stroke: "#6C8CFF", width: 1.7, dash: "6 6", arrow: "arrow-dep", opacity: 0.9 },
-  shared: { stroke: "#D9492B", width: 2.6, dash: "none", arrow: "none", opacity: 1 },
-};
-
-// --------------------------------------------------------------- analysis ---
-const ANALYSIS_FALLBACK = {
-  overlaps: [
-    { roleIds: ["head_sales", "sales_ops"], area: "Pricing exceptions",
-      explanation: "Both the Head of Sales and the Sales Operations Analyst list approval of pricing exceptions as a mandate. A deal can be approved twice, or slip between them while each assumes the other has it." },
-  ],
-  gaps: [
-    { area: "Vendor offboarding",
-      explanation: "Vendor onboarding and contracts sit with Operations, but no role owns offboarding. Contracts can auto renew or lapse with no one accountable for closing them out." },
-  ],
-};
-
-// --------------------------------------------------------------- scenarios ---
-// Each scenario is self contained: what it changes, which nodes ripple and
-// why (in propagation order), the data migrations, and pre written
-// notifications used as a fallback when the AI call is unavailable.
-const SCENARIOS = {
-  add_ai: {
-    key: "add_ai",
-    label: "Add a Head of AI role",
-    summary: "A Head of AI role is added to Leadership. It takes ownership of model governance and the AI roadmap, which today are split across Engineering and Product.",
-    newRoles: [
-      { id: "head_ai", title: "Head of AI", person: "Vacant, open req", dept: "Leadership", x: 980, y: 150, isNew: true,
-        purpose: "Owns AI strategy, model governance, and responsible use.",
-        resp: ["AI strategy", "AI feature roadmap", "Model evaluation", "Responsible AI review"],
-        mandates: ["Approve model deployments", "Sign off on AI risk"] },
-    ],
-    newEdges: [
-      { from: "head_ai", to: "ceo", type: "reports" },
-      { from: "vp_eng", to: "head_ai", type: "dependency", label: "model risk" },
-      { from: "vp_product", to: "head_ai", type: "dependency", label: "AI roadmap" },
-      { from: "senior_eng", to: "head_ai", type: "handoff", label: "eval handoff" },
-    ],
-    migrations: [
-      { fromId: "vp_eng", kind: "mandates", item: "Approve model deployments" },
-      { fromId: "vp_product", kind: "resp", item: "AI feature roadmap" },
-      { fromId: "senior_eng", kind: "resp", item: "Model evaluation" },
-    ],
-    affected: [
-      { id: "head_ai", reason: "New role created" },
-      { id: "vp_eng", reason: "Model governance moves out" },
-      { id: "vp_product", reason: "AI roadmap moves out" },
-      { id: "senior_eng", reason: "Model evaluation reassigned" },
-      { id: "pm", reason: "New sign off in the path" },
-    ],
-    fallbackNotifications: [
-      { toId: "vp_eng", subject: "Model governance moves to the Head of AI",
-        body: "Priya, with the new Head of AI role, approval of model deployments moves out of Engineering. Your team still builds and ships as before. Final sign off on model risk now sits with the Head of AI. Nothing changes for your current sprint, the handoff starts once the role is filled." },
-      { toId: "vp_product", subject: "AI roadmap consolidates under one owner",
-        body: "Johan, the AI feature roadmap you have been holding moves to the Head of AI. Product keeps the customer facing roadmap. AI capabilities get planned together, with the Head of AI setting direction on model choices. Expect a short handoff session once the seat is filled." },
-      { toId: "senior_eng", subject: "Model evaluation gets a dedicated owner",
-        body: "Nina, model evaluation moves from your plate to the Head of AI. You keep implementation and code review. This should give back the time you were spending on eval tooling. You stay close to the standards, you just will not own them." },
-    ],
-  },
-
-  split_cs: {
-    key: "split_cs",
-    label: "Split Customer Success",
-    summary: "Customer Success splits into Onboarding and Retention. Two focused leads replace one Head of Customer Success, and the reporting lines and the sales handoff move to the new owners.",
-    newRoles: [
-      { id: "head_onboarding", title: "Head of Onboarding", person: "Sofia Berg", dept: "Customer Success", x: 980, y: 150, isNew: true,
-        purpose: "Owns the first 90 days of every new customer.",
-        resp: ["Onboarding playbook", "Time to value", "Implementation quality"],
-        mandates: ["Approve onboarding scope"] },
-      { id: "head_retention", title: "Head of Retention", person: "Vacant, open req", dept: "Customer Success", x: 1200, y: 150, isNew: true,
-        purpose: "Owns renewals, expansion, and churn.",
-        resp: ["Renewals", "Expansion", "Churn analysis"],
-        mandates: ["Approve save offers"] },
-    ],
-    newEdges: [
-      { from: "head_onboarding", to: "ceo", type: "reports" },
-      { from: "head_retention", to: "ceo", type: "reports" },
-      { from: "csm", to: "head_onboarding", type: "reports" },
-      { from: "support_lead", to: "head_retention", type: "reports" },
-      { from: "ae", to: "head_onboarding", type: "handoff", label: "deal handoff" },
-    ],
-    removeEdges: [
-      { from: "csm", to: "head_cs" },
-      { from: "support_lead", to: "head_cs" },
-      { from: "head_cs", to: "ceo" },
-    ],
-    retire: ["head_cs"],
-    affected: [
-      { id: "head_cs", reason: "Role splits in two" },
-      { id: "head_onboarding", reason: "New owner, onboarding" },
-      { id: "head_retention", reason: "New owner, retention" },
-      { id: "csm", reason: "Now reports to Onboarding" },
-      { id: "support_lead", reason: "Now reports to Retention" },
-      { id: "ae", reason: "Handoff target changed" },
-    ],
-    fallbackNotifications: [
-      { toId: "csm", subject: "Your reporting line moves to Onboarding",
-        body: "Maja, Customer Success is splitting into Onboarding and Retention. You move under the Head of Onboarding, since your work lives in the first 90 days. Your accounts stay with you through onboarding, then hand to Retention at go live. We will map the exact cutover with you this week." },
-      { toId: "support_lead", subject: "Support moves under Retention",
-        body: "Felix, with the split, Support sits under the Head of Retention, closer to renewals and churn signals. Your escalation paths stay the same for now. The one change is that churn risk flags route to Retention, not to the old Head of Customer Success." },
-      { toId: "ae", subject: "Your handoff at close now goes to Onboarding",
-        body: "Tomas, when you close a deal the handoff now goes to the Head of Onboarding, not the general Customer Success inbox. Same fields, same timing. This should make the first customer call faster to book." },
-      { toId: "head_sales", subject: "Sales to CS handoff has a clear owner",
-        body: "Erik, the Customer Success split gives your team a single named owner for new customer handoffs. Closed deals now route to Onboarding. Nothing changes in your pipeline, only where a closed deal lands." },
-    ],
-  },
-
-  move_mandate: {
-    key: "move_mandate",
-    label: "Move a mandate between roles",
-    summary: "Approval of pricing exceptions moves from the Head of Sales to the Sales Operations Analyst. This closes the overlap where two roles both owned it.",
-    newRoles: [],
-    newEdges: [],
-    removeEdges: [{ from: "head_sales", to: "sales_ops", type: "shared" }],
-    migrations: [
-      { fromId: "head_sales", kind: "mandates", item: "Approve pricing exceptions" },
-    ],
-    affected: [
-      { id: "head_sales", reason: "Gives up pricing approvals" },
-      { id: "sales_ops", reason: "Now sole owner" },
-      { id: "ae", reason: "Escalate to Sales Ops now" },
-    ],
-    fallbackNotifications: [
-      { toId: "head_sales", subject: "Pricing exceptions move to Sales Ops",
-        body: "Erik, to close the overlap, approval of pricing exceptions moves fully to the Sales Operations Analyst. You keep list price and discount policy. Day to day exception calls no longer wait on you. You will still get a weekly summary of what was approved." },
-      { toId: "sales_ops", subject: "You now own pricing exceptions end to end",
-        body: "Hanna, approval of pricing exceptions is now yours alone. Reps escalate directly to you, not to the Head of Sales. Keep the existing threshold, anything past 20 percent needs a note. Send only true edge cases further up." },
-      { toId: "ae", subject: "Send pricing exceptions to Sales Ops",
-        body: "Tomas, when a deal needs a pricing exception, send it to the Sales Operations Analyst rather than the Head of Sales. This should cut approval time. The threshold and the fields are unchanged." },
-    ],
-  },
-};
-
-// apply a scenario to a clean base, returning the next roles + edges
-function applyScenario(sc) {
-  let roles = SEED_ROLES.map((r) => ({ ...r, resp: [...r.resp], mandates: [...r.mandates] }));
-  let edges = SEED_EDGES.map((e) => ({ ...e }));
-
-  (sc.newRoles || []).forEach((nr) => roles.push({ ...nr, resp: [...nr.resp], mandates: [...nr.mandates] }));
-  (sc.retire || []).forEach((id) => {
-    const role = roles.find((r) => r.id === id);
-    if (role) role.retired = true;
+  (sc.newRoles || []).forEach((nr) => {
+    const n = normRole(nr);
+    roles.push({ ...n, resp: [...n.resp], mandates: [...n.mandates], people: [...n.people] });
   });
+  (sc.retire || []).forEach((id) => { const r = roles.find((x) => x.id === id); if (r) r.retired = true; });
   (sc.removeEdges || []).forEach((re) => {
     edges = edges.filter((e) => !(e.from === re.from && e.to === re.to && (!re.type || e.type === re.type)));
   });
   (sc.newEdges || []).forEach((ne) => edges.push({ ...ne }));
   (sc.migrations || []).forEach((m) => {
     const src = roles.find((r) => r.id === m.fromId);
-    if (src) src[m.kind] = src[m.kind].filter((x) => x.toLowerCase() !== m.item.toLowerCase());
+    if (src && Array.isArray(src[m.kind])) src[m.kind] = src[m.kind].filter((x) => x.toLowerCase() !== m.item.toLowerCase());
   });
   return { roles, edges };
 }
 
-const byId = (roles, id) => roles.find((r) => r.id === id);
+function fallbackMigrations(sc) {
+  return (sc.migrations || []).map((m) => ({ fromId: m.fromId, item: m.item, reason: m.reason || "Reassigned to the new role" }));
+}
 
 // --------------------------------------------------------------- AI layer ---
 const AI_SYS =
@@ -321,10 +77,8 @@ async function aiNotifications(sc, roles) {
   const people = sc.affected
     .map((a) => byId(roles, a.id))
     .filter(Boolean)
-    .filter((r) => !/vacant/i.test(r.person)) // never draft a message to an unfilled seat
-    .map((r) => `- ${r.id} :: ${r.person} (${r.title}) :: reason: ${
-      (sc.affected.find((a) => a.id === r.id) || {}).reason
-    }`)
+    .filter((r) => !/vacant/i.test(nameOf(r)))
+    .map((r) => `- ${r.id} :: ${nameOf(r)} (${r.title}) :: reason: ${(sc.affected.find((a) => a.id === r.id) || {}).reason}`)
     .join("\n");
   const prompt =
     `A change is happening in the org.\n` +
@@ -339,9 +93,7 @@ async function aiNotifications(sc, roles) {
 }
 
 async function aiAnalyze(roles) {
-  const compact = roles
-    .filter((r) => !r.retired)
-    .map((r) => ({ id: r.id, title: r.title, responsibilities: r.resp, mandates: r.mandates }));
+  const compact = roles.filter((r) => !r.retired).map((r) => ({ id: r.id, title: r.title, responsibilities: r.resp, mandates: r.mandates }));
   const prompt =
     `Roles:\n${JSON.stringify(compact)}\n\n` +
     `Find where two or more roles own the same responsibility or mandate (overlaps), and important work that no role owns (gaps).\n` +
@@ -353,9 +105,7 @@ async function aiAnalyze(roles) {
 }
 
 async function aiRebalance(sc, roles) {
-  const compact = roles
-    .filter((r) => !r.isNew && !r.retired)
-    .map((r) => ({ id: r.id, title: r.title, responsibilities: r.resp, mandates: r.mandates }));
+  const compact = roles.filter((r) => !r.isNew && !r.retired).map((r) => ({ id: r.id, title: r.title, responsibilities: r.resp, mandates: r.mandates }));
   const nr = sc.newRoles[0];
   const prompt =
     `Existing roles:\n${JSON.stringify(compact)}\n\n` +
@@ -367,47 +117,30 @@ async function aiRebalance(sc, roles) {
   return list;
 }
 
-// fallback migrations rendered as human sentences for the change rail
-function fallbackMigrations(sc) {
-  const reasons = {
-    add_ai: {
-      "Approve model deployments": "Model risk gets a dedicated owner",
-      "AI feature roadmap": "AI roadmap consolidates under one role",
-      "Model evaluation": "Evaluation standards centralize",
-    },
-  };
-  return (sc.migrations || []).map((m) => ({
-    fromId: m.fromId,
-    item: m.item,
-    reason: (reasons[sc.key] && reasons[sc.key][m.item]) || "Reassigned to the new role",
-  }));
-}
-
-const PERSONA_ID = "csm";
-const SEED_TIMELINE = [
-  { when: "Last quarter", title: "Support escalation path clarified",
-    meaning: "Escalations from Support now reach you with a severity tag, so you triage the urgent ones first." },
-];
-
 // ============================================================= component ====
 export default function RoleEquilibrium() {
+  const [companyId, setCompanyId] = useState(FIRST_OK);
+  const wrap = LOADED[companyId];
+  const cfg = wrap.ok ? wrap.config : null;
+
   const [started, setStarted] = useState(false);
   const [view, setView] = useState("system"); // system | personal
-  const [roles, setRoles] = useState(SEED_ROLES);
-  const [edges, setEdges] = useState(SEED_EDGES);
+  const [roles, setRoles] = useState(() => (cfg ? cfg.roles : []));
+  const [edges, setEdges] = useState(() => (cfg ? cfg.edges : []));
 
   const [selected, setSelected] = useState(null);
-  const [rightMode, setRightMode] = useState("info"); // info | role | change | analysis
+  const [rightMode, setRightMode] = useState("info");
+  const [backboneOnly, setBackboneOnly] = useState(false);
 
-  const [change, setChange] = useState(null); // active scenario descriptor
+  const [change, setChange] = useState(null);
   const [rippleStep, setRippleStep] = useState(0);
   const [migrations, setMigrations] = useState([]);
   const [notifications, setNotifications] = useState(null);
-  const [notifState, setNotifState] = useState("idle"); // idle | loading | live | fallback
+  const [notifState, setNotifState] = useState("idle");
   const [analysis, setAnalysis] = useState(null);
-  const [analysisState, setAnalysisState] = useState("idle"); // idle | loading | live | fallback
+  const [analysisState, setAnalysisState] = useState("idle");
 
-  const [timeline, setTimeline] = useState(SEED_TIMELINE);
+  const [timeline, setTimeline] = useState(() => (cfg ? cfg.timelineSeed : []));
   const runToken = useRef(0);
 
   const affectedIndex = useMemo(() => {
@@ -421,7 +154,6 @@ export default function RoleEquilibrium() {
     return a ? a.i < rippleStep : false;
   };
 
-  // ripple animation: reveal affected nodes one by one, under 3 seconds total
   useEffect(() => {
     if (!change) return;
     if (rippleStep >= change.affected.length) return;
@@ -429,24 +161,33 @@ export default function RoleEquilibrium() {
     return () => clearTimeout(t);
   }, [change, rippleStep]);
 
-  const resetSystem = useCallback(() => {
-    setRoles(SEED_ROLES);
-    setEdges(SEED_EDGES);
-    setChange(null);
-    setRippleStep(0);
-    setMigrations([]);
-    setNotifications(null);
-    setNotifState("idle");
-    setSelected(null);
-    setRightMode("info");
+  const clearRun = useCallback(() => {
+    setChange(null); setRippleStep(0); setMigrations([]);
+    setNotifications(null); setNotifState("idle");
+    setSelected(null); setRightMode("info"); setBackboneOnly(false);
   }, []);
 
+  const resetSystem = useCallback(() => {
+    if (!cfg) return;
+    setRoles(cfg.roles); setEdges(cfg.edges);
+    clearRun();
+  }, [cfg, clearRun]);
+
+  const selectCompany = useCallback((id) => {
+    setCompanyId(id);
+    const c = LOADED[id];
+    if (c.ok) { setRoles(c.config.roles); setEdges(c.config.edges); setTimeline(c.config.timelineSeed); }
+    setView("system");
+    clearRun();
+  }, [clearRun]);
+
   const runScenario = useCallback(async (key) => {
-    const sc = SCENARIOS[key];
+    if (!cfg) return;
+    const sc = cfg.scenarios.find((s) => s.id === key);
     if (!sc) return;
     const token = ++runToken.current;
 
-    const { roles: nextRoles, edges: nextEdges } = applyScenario(sc);
+    const { roles: nextRoles, edges: nextEdges } = applyScenario(cfg, sc);
     setStarted(true);
     setView("system");
     setSelected(null);
@@ -459,61 +200,60 @@ export default function RoleEquilibrium() {
     setNotifState("loading");
     setMigrations(sc.migrations ? fallbackMigrations(sc) : []);
 
-    // personal timeline: record if the persona is touched
-    if (sc.affected.some((a) => a.id === PERSONA_ID)) {
-      const line = personalLineFor(sc);
-      if (line) setTimeline((t) => [line, ...t.filter((x) => x.title !== line.title)]);
+    if (cfg.persona && sc.personalEntry && sc.affected.some((a) => a.id === cfg.persona)) {
+      const line = sc.personalEntry;
+      setTimeline((t) => [line, ...t.filter((x) => x.title !== line.title)]);
     }
 
-    // rebalancing suggestions (AI, fallback already shown)
     if (sc.newRoles && sc.newRoles.length && sc.migrations && sc.migrations.length) {
-      aiRebalance(sc, nextRoles)
-        .then((mg) => { if (runToken.current === token) setMigrations(mg); })
-        .catch(() => {});
+      aiRebalance(sc, nextRoles).then((mg) => { if (runToken.current === token) setMigrations(mg); }).catch(() => {});
     }
 
-    // notifications (AI, fallback on failure)
     try {
       const list = await aiNotifications(sc, nextRoles);
       if (runToken.current !== token) return;
-      setNotifications(list);
-      setNotifState("live");
+      setNotifications(list); setNotifState("live");
     } catch {
       if (runToken.current !== token) return;
-      setNotifications(sc.fallbackNotifications);
-      setNotifState("fallback");
+      setNotifications(sc.fallbackNotifications); setNotifState("fallback");
     }
-  }, []);
+  }, [cfg]);
 
   const analyze = useCallback(async () => {
-    setView("system");
-    setRightMode("analysis");
-    setSelected(null);
-    setAnalysisState("loading");
-    setAnalysis(null);
+    if (!cfg) return;
+    setView("system"); setRightMode("analysis"); setSelected(null);
+    setAnalysisState("loading"); setAnalysis(null);
     try {
       const res = await aiAnalyze(roles);
-      setAnalysis(res);
-      setAnalysisState("live");
+      setAnalysis(res); setAnalysisState("live");
     } catch {
-      setAnalysis(ANALYSIS_FALLBACK);
+      setAnalysis(cfg.analysisFallback || { overlaps: [], gaps: [] });
       setAnalysisState("fallback");
     }
-  }, [roles]);
+  }, [cfg, roles]);
 
-  const openRole = (id) => {
-    setSelected(id);
-    setRightMode("role");
-  };
+  const openRole = (id) => { setSelected(id); setRightMode("role"); };
+  const goCompanies = () => { setStarted(false); clearRun(); };
 
-  const persona = byId(roles, PERSONA_ID);
+  // ---- invalid config: show the plain language errors ----
+  if (!wrap.ok) {
+    return (
+      <div className="req-root">
+        <style>{CSS}</style>
+        <ConfigError name={wrap.name} errors={wrap.errors} companies={COMPANY_LIST} onPick={selectCompany} />
+      </div>
+    );
+  }
 
-  // ---------------------------------------------------------------- render ---
+  const persona = cfg.persona ? byId(roles, cfg.persona) : null;
+
   if (!started) {
     return (
       <div className="req-root">
         <style>{CSS}</style>
         <Landing
+          cfg={cfg} companyId={companyId} companies={COMPANY_LIST}
+          onSelectCompany={selectCompany}
           onScenario={(k) => runScenario(k)}
           onExplore={() => { setStarted(true); setView("system"); setRightMode("info"); }}
         />
@@ -527,16 +267,17 @@ export default function RoleEquilibrium() {
 
       <header className="req-bar">
         <div className="req-brand">
-          <span className="req-kicker">Good Evil Club · probe</span>
+          <span className="req-kicker">Good Evil Club · {cfg.name}</span>
           <h1>Role Equilibrium</h1>
         </div>
 
         <div className="req-toggle" role="tablist" aria-label="View">
           <button className={"tg" + (view === "system" ? " on" : "")} onClick={() => setView("system")}>System view</button>
-          <button className={"tg" + (view === "personal" ? " on" : "")} onClick={() => setView("personal")}>My role</button>
+          {persona && <button className={"tg" + (view === "personal" ? " on" : "")} onClick={() => setView("personal")}>My role</button>}
         </div>
 
         <div className="req-actions">
+          <button className="btn ghost" onClick={goCompanies}>Companies</button>
           <button className="btn ghost" onClick={resetSystem}>Reset</button>
           <button className="btn" onClick={analyze}>Analyze system</button>
         </div>
@@ -545,95 +286,123 @@ export default function RoleEquilibrium() {
       {view === "system" ? (
         <div className="req-stage">
           <section className="req-canvas-wrap">
-            <SystemMap
-              roles={roles}
-              edges={edges}
-              selected={selected}
-              onSelect={openRole}
-              affectedIndex={affectedIndex}
-              rippleActive={rippleActive}
-            />
-            <Legend />
-            <div className="req-scenariobar">
-              <span className="req-scenariobar-l">Run a change</span>
-              {Object.values(SCENARIOS).map((s) => (
-                <button key={s.key} className={"chipbtn" + (change && change.key === s.key ? " on" : "")}
-                  onClick={() => runScenario(s.key)}>{s.label}</button>
-              ))}
-            </div>
+            <SystemMap cfg={cfg} roles={roles} edges={edges} selected={selected} onSelect={openRole}
+              affectedIndex={affectedIndex} rippleActive={rippleActive} backboneOnly={backboneOnly} />
+            <Legend cfg={cfg} backboneOnly={backboneOnly} onToggleBackbone={() => setBackboneOnly((v) => !v)} />
+            {cfg.scenarios.length > 0 && (
+              <div className="req-scenariobar">
+                <span className="req-scenariobar-l">Run a change</span>
+                {cfg.scenarios.map((s) => (
+                  <button key={s.id} className={"chipbtn" + (change && change.id === s.id ? " on" : "")}
+                    onClick={() => runScenario(s.id)}>{s.label}</button>
+                ))}
+              </div>
+            )}
           </section>
 
           <aside className="req-panel">
             {rightMode === "change" && change && (
-              <ChangeRail
-                change={change} roles={roles} migrations={migrations}
-                notifications={notifications} notifState={notifState}
-                rippleStep={rippleStep} onClose={resetSystem}
-              />
+              <ChangeRail cfg={cfg} change={change} roles={roles} migrations={migrations}
+                notifications={notifications} notifState={notifState} rippleStep={rippleStep} onClose={resetSystem} />
             )}
             {rightMode === "role" && selected && (
-              <RolePanel role={byId(roles, selected)} roles={roles} edges={edges} onClose={() => setRightMode("info")} />
+              <RolePanel cfg={cfg} role={byId(roles, selected)} roles={roles} edges={edges} onClose={() => setRightMode("info")} />
             )}
             {rightMode === "analysis" && (
               <AnalysisPanel analysis={analysis} state={analysisState} roles={roles} onClose={() => setRightMode("info")} />
             )}
             {rightMode === "info" && (
-              <InfoPanel onAnalyze={analyze} onScenario={runScenario} />
+              <InfoPanel cfg={cfg} onAnalyze={analyze} onScenario={runScenario} />
             )}
           </aside>
         </div>
       ) : (
-        <PersonalView persona={persona} roles={roles} edges={edges} timeline={timeline} onBack={() => setView("system")} />
+        <PersonalView cfg={cfg} persona={persona} roles={roles} edges={edges} timeline={timeline} onBack={() => setView("system")} />
       )}
     </div>
   );
 }
 
-// personal timeline entries per scenario, for the persona (CSM)
-function personalLineFor(sc) {
-  if (sc.key === "split_cs") {
-    return { when: "Just now", title: "Reporting line moved to Onboarding",
-      meaning: "You now sit under the Head of Onboarding. Your accounts stay with you through onboarding, then hand to Retention at go live." };
-  }
-  return null;
-}
-
 // ------------------------------------------------------------- sub views ----
-function Landing({ onScenario, onExplore }) {
+function Landing({ cfg, companyId, companies, onSelectCompany, onScenario, onExplore }) {
   return (
     <div className="req-landing">
       <span className="req-kicker gold">Good Evil Club · probe</span>
       <h1 className="req-hero">Role Equilibrium</h1>
       <p className="req-pitch">Roles are a living system. Change one, and the rest have to move with it.</p>
-      <p className="req-sub">
-        A mid size company, fifteen roles, wired together by handoffs, dependencies, shared mandates and
-        reporting lines. Run a change and watch which roles it touches, then read the notification each
-        affected person would actually receive.
-      </p>
 
-      <div className="req-scenarios">
-        <p className="req-eyebrow">Run a scenario</p>
-        <div className="req-scenario-grid">
-          {Object.values(SCENARIOS).map((s) => (
-            <button key={s.key} className="scenariocard" onClick={() => onScenario(s.key)}>
-              <span className="scenariocard-t">{s.label}</span>
-              <span className="scenariocard-go">Run change →</span>
-            </button>
-          ))}
+      <p className="req-eyebrow" style={{ marginTop: 6 }}>Choose a company</p>
+      <div className="req-company-grid">
+        {companies.map((c) => (
+          <button key={c.id} className={"companycard" + (c.id === companyId ? " on" : "")} onClick={() => onSelectCompany(c.id)}>
+            <span className="companycard-k">{c.kind}</span>
+            <span className="companycard-t">{c.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="req-sub">{cfg.blurb}</p>
+
+      {cfg.scenarios.length > 0 ? (
+        <div className="req-scenarios">
+          <p className="req-eyebrow">Run a scenario</p>
+          <div className="req-scenario-grid">
+            {cfg.scenarios.map((s) => (
+              <button key={s.id} className="scenariocard" onClick={() => onScenario(s.id)}>
+                <span className="scenariocard-t">{s.label}</span>
+                <span className="scenariocard-go">Run change →</span>
+              </button>
+            ))}
+          </div>
+          <button className="req-explore" onClick={onExplore}>Or explore the organization first</button>
         </div>
-        <button className="req-explore" onClick={onExplore}>Or explore the organization first</button>
+      ) : (
+        <div className="req-scenarios">
+          <p className="req-sub">This organization has no scenarios yet. You can still explore the map.</p>
+          <button className="req-explore" onClick={onExplore}>Explore the organization</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConfigError({ name, errors, companies, onPick }) {
+  return (
+    <div className="req-landing">
+      <span className="req-kicker gold">Good Evil Club · probe</span>
+      <h1 className="req-hero" style={{ fontSize: "clamp(32px,5vw,52px)" }}>This config does not load</h1>
+      <p className="req-sub">The config for {name} has problems that need fixing before it can run:</p>
+      <ul className="req-errlist">
+        {errors.map((e, i) => <li key={i}>{e}</li>)}
+      </ul>
+      <div className="req-company-grid" style={{ marginTop: 8 }}>
+        {companies.map((c) => (
+          <button key={c.id} className="companycard" onClick={() => onPick(c.id)}>
+            <span className="companycard-k">{c.kind}</span>
+            <span className="companycard-t">{c.name}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function Legend() {
+function Legend({ cfg, backboneOnly, onToggleBackbone }) {
   return (
     <div className="req-legend">
-      <span><i className="sw reports" /> reports to</span>
-      <span><i className="sw handoff" /> handoff</span>
-      <span><i className="sw dependency" /> dependency</span>
-      <span><i className="sw shared" /> shared mandate</span>
+      {cfg.edgeTypes.map((t) => (
+        <span key={t.id}>
+          <i className="sw" style={{
+            borderTopWidth: t.legendWidth, borderTopStyle: t.dash !== "none" ? "dashed" : "solid",
+            borderTopColor: t.legendColor,
+          }} /> {t.label}
+        </span>
+      ))}
+      {cfg.backbone.length > 0 && (
+        <button className={"req-filter" + (backboneOnly ? " on" : "")} onClick={onToggleBackbone}>
+          {backboneOnly ? "Showing backbone" : "Backbone only"}
+        </button>
+      )}
       <span className="hint">click a role to open it</span>
     </div>
   );
@@ -650,44 +419,45 @@ function edgePath(a, b) {
   return { d: `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`, lx: cx, ly: cy };
 }
 
-function SystemMap({ roles, edges, selected, onSelect, affectedIndex, rippleActive }) {
+function SystemMap({ cfg, roles, edges, selected, onSelect, affectedIndex, rippleActive, backboneOnly }) {
   const NW = 158, NH = 60;
-  const pos = useMemo(() => {
-    const m = {};
-    roles.forEach((r) => (m[r.id] = r));
-    return m;
-  }, [roles]);
+  const [W, H] = [cfg.layout.width, cfg.layout.height];
+  const pos = useMemo(() => { const m = {}; roles.forEach((r) => (m[r.id] = r)); return m; }, [roles]);
+  const arrows = cfg.edgeTypes.filter((t) => t.arrow);
 
   return (
-    <svg viewBox="0 0 1520 860" className="req-canvas" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox={`0 0 ${W} ${H}`} className="req-canvas" preserveAspectRatio="xMidYMid meet">
       <defs>
         <pattern id="reqgrid" width="30" height="30" patternUnits="userSpaceOnUse">
           <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#efe7d80f" strokeWidth="1" />
         </pattern>
-        {[["arrow-reports", "#4b4640"], ["arrow-handoff", "#E5643C"], ["arrow-dep", "#6C8CFF"]].map(([id, c]) => (
-          <marker key={id} id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke={c} strokeWidth="1.6" />
+        {arrows.map((t) => (
+          <marker key={t.id} id={`arrow-${t.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke={t.stroke} strokeWidth="1.6" />
           </marker>
         ))}
       </defs>
-      <rect x="0" y="0" width="1520" height="860" fill="url(#reqgrid)" />
+      <rect x="0" y="0" width={W} height={H} fill="url(#reqgrid)" />
 
       {/* edges */}
       {edges.map((e, i) => {
         const a = pos[e.from], b = pos[e.to];
         if (!a || !b || a.retired || b.retired) return null;
-        const st = EDGE_STYLE[e.type];
+        const st = etype(cfg, e.type);
+        if (backboneOnly && !cfg.backbone.includes(e.type)) return null;
         const g = edgePath(a, b);
         const hot = rippleActive(e.from) && rippleActive(e.to);
+        const w = st.mapLabel ? st.label.length * 7 + 14 : 0;
         return (
           <g key={"e" + i}>
             <path d={g.d} fill="none" stroke={hot ? "#E4B23C" : st.stroke} strokeWidth={hot ? st.width + 1 : st.width}
-              strokeDasharray={st.dash} markerEnd={st.arrow === "none" ? undefined : `url(#${st.arrow})`}
+              strokeDasharray={st.dash === "none" ? undefined : st.dash}
+              markerEnd={st.arrow ? `url(#arrow-${st.id})` : undefined}
               opacity={hot ? 1 : st.opacity} className={hot ? "req-edge hot" : "req-edge"} />
-            {e.type === "shared" && (
+            {st.mapLabel && (
               <g transform={`translate(${g.lx} ${g.ly})`}>
-                <rect x={-56} y={-9} width={112} height={17} rx={4} fill="#1b1512" stroke="#D9492B" strokeWidth="0.8" />
-                <text textAnchor="middle" y={3} className="req-edge-label" fill="#e8836e">shared mandate</text>
+                <rect x={-w / 2} y={-9} width={w} height={17} rx={4} fill="#1b1512" stroke={st.stroke} strokeWidth="0.8" />
+                <text textAnchor="middle" y={3} className="req-edge-label" fill={st.mapLabelColor || st.stroke}>{st.label}</text>
               </g>
             )}
           </g>
@@ -697,7 +467,7 @@ function SystemMap({ roles, edges, selected, onSelect, affectedIndex, rippleActi
       {/* nodes */}
       {roles.map((r) => {
         if (r.retired && !affectedIndex.has(r.id)) return null;
-        const accent = DEPTS[r.dept] || "#8C99A6";
+        const accent = domainColor(cfg, r.domain);
         const a = affectedIndex.get(r.id);
         const isActive = a && rippleActive(r.id);
         const isSel = selected === r.id;
@@ -709,8 +479,8 @@ function SystemMap({ roles, edges, selected, onSelect, affectedIndex, rippleActi
             <rect x={0} y={0} width={5} height={NH} rx={2} fill={accent} />
             {r.isNew && <rect x={NW - 40} y={9} width={30} height={15} rx={7} fill={accent} opacity="0.9" />}
             {r.isNew && <text x={NW - 25} y={20} textAnchor="middle" className="req-node-new">NEW</text>}
-            <text x={16} y={26} className="req-node-title">{SHORT_TITLE[r.id] || r.title}</text>
-            <text x={16} y={45} className="req-node-person">{r.person}</text>
+            <text x={16} y={26} className="req-node-title">{r.short || r.title}</text>
+            <text x={16} y={45} className="req-node-person">{nameLabel(r)}</text>
             {isActive && (
               <g transform={`translate(${NW / 2} ${NH + 20})`}>
                 <rect x={-92} y={-14} width={184} height={26} rx={6} fill="#E4B23C" />
@@ -724,7 +494,7 @@ function SystemMap({ roles, edges, selected, onSelect, affectedIndex, rippleActi
   );
 }
 
-function ChangeRail({ change, roles, migrations, notifications, notifState, rippleStep, onClose }) {
+function ChangeRail({ cfg, change, roles, migrations, notifications, notifState, rippleStep, onClose }) {
   const done = rippleStep >= change.affected.length;
   return (
     <div className="req-inner">
@@ -777,11 +547,11 @@ function ChangeRail({ change, roles, migrations, notifications, notifState, ripp
           return (
             <div className="req-msg" key={i} style={{ animationDelay: `${i * 90}ms` }}>
               <div className="req-msg-to">
-                <span className="req-msg-avatar" style={{ background: (to && DEPTS[to.dept]) || "#8C99A6" }}>
-                  {to ? initials(to.person) : "?"}
+                <span className="req-msg-avatar" style={{ background: to ? domainColor(cfg, to.domain) : "#8C99A6" }}>
+                  {to ? initials(nameOf(to)) : "?"}
                 </span>
                 <div>
-                  <p className="req-msg-name">To: {to ? to.person : n.toId}</p>
+                  <p className="req-msg-name">To: {to ? nameOf(to) : n.toId}</p>
                   <p className="req-msg-role">{to ? to.title : ""}</p>
                 </div>
               </div>
@@ -795,41 +565,50 @@ function ChangeRail({ change, roles, migrations, notifications, notifState, ripp
   );
 }
 
-function RolePanel({ role, roles, edges, onClose }) {
-  if (!role) return null;
-  const conns = edges
+function connectionsOf(cfg, role, roles, edges) {
+  return edges
     .filter((e) => e.from === role.id || e.to === role.id)
     .map((e) => {
       const otherId = e.from === role.id ? e.to : e.from;
       const other = byId(roles, otherId);
-      const dir = e.type === "reports" ? (e.from === role.id ? "reports to" : "manages") : e.type;
-      return other ? { title: other.title, person: other.person, type: e.type, dir, label: e.label } : null;
+      if (!other) return null;
+      const t = etype(cfg, e.type);
+      const dir = t.dir ? (e.from === role.id ? t.dir.from : t.dir.to) : t.conn;
+      return { title: other.title, dir, color: t.legendColor, label: e.label };
     })
     .filter(Boolean);
+}
 
+function RolePanel({ cfg, role, roles, edges, onClose }) {
+  if (!role) return null;
+  const conns = connectionsOf(cfg, role, roles, edges);
   return (
     <div className="req-inner">
       <div className="req-inner-head">
-        <span className="req-eyebrow" style={{ color: DEPTS[role.dept] }}>{role.dept}</span>
+        <span className="req-eyebrow" style={{ color: domainColor(cfg, role.domain) }}>{domainName(cfg, role.domain)}</span>
         <button className="req-x" onClick={onClose}>×</button>
       </div>
       <h2>{role.title}</h2>
-      <p className="req-person">{role.person}</p>
-      <p className="req-summary">{role.purpose}</p>
+      <p className="req-person">{(role.people || []).join(", ") || role.person || ""}</p>
+      {role.purpose && <p className="req-summary">{role.purpose}</p>}
 
-      <div className="req-block">
-        <h3>Responsibilities</h3>
-        <div className="req-chips">{role.resp.map((r) => <span key={r} className="chip">{r}</span>)}</div>
-      </div>
-      <div className="req-block">
-        <h3>Mandates</h3>
-        <div className="req-chips">{role.mandates.map((m) => <span key={m} className="chip mandate">{m}</span>)}</div>
-      </div>
+      {role.resp && role.resp.length > 0 && (
+        <div className="req-block">
+          <h3>Responsibilities</h3>
+          <div className="req-chips">{role.resp.map((r) => <span key={r} className="chip">{r}</span>)}</div>
+        </div>
+      )}
+      {role.mandates && role.mandates.length > 0 && (
+        <div className="req-block">
+          <h3>Mandates</h3>
+          <div className="req-chips">{role.mandates.map((m) => <span key={m} className="chip mandate">{m}</span>)}</div>
+        </div>
+      )}
       <div className="req-block">
         <h3>Connections</h3>
         {conns.map((c, i) => (
           <div className="req-conn" key={i}>
-            <span className={"req-conn-dot " + c.type} />
+            <span className="req-conn-dot" style={{ background: c.color }} />
             <span className="req-conn-dir">{c.dir}</span>
             <span className="req-conn-title">{c.title}</span>
             {c.label && <span className="req-conn-label">{c.label}</span>}
@@ -885,63 +664,60 @@ function AnalysisPanel({ analysis, state, roles, onClose }) {
   );
 }
 
-function InfoPanel({ onAnalyze, onScenario }) {
+function InfoPanel({ cfg, onAnalyze, onScenario }) {
   return (
     <div className="req-inner">
       <span className="req-eyebrow gold">How to read this</span>
       <h2>The organization is a system</h2>
       <p className="req-summary">
-        Every card is a role. The lines are how the roles depend on each other: reporting lines,
-        handoffs, dependencies, and shared mandates. Two roles share the pricing exception mandate,
-        and no role owns vendor offboarding. Run Analyze system to surface both.
+        Every card is a role. The lines are how the roles depend on each other. {cfg.infoNote ||
+          "Open a role to read its definition and connections."}
       </p>
       <button className="btn wide" onClick={onAnalyze}>Analyze system</button>
-      <div className="req-block">
-        <h3>Run a change</h3>
-        {Object.values(SCENARIOS).map((s) => (
-          <button key={s.key} className="req-listbtn" onClick={() => onScenario(s.key)}>
-            {s.label}<span>→</span>
-          </button>
-        ))}
-      </div>
+      {cfg.scenarios.length > 0 && (
+        <div className="req-block">
+          <h3>Run a change</h3>
+          {cfg.scenarios.map((s) => (
+            <button key={s.id} className="req-listbtn" onClick={() => onScenario(s.id)}>
+              {s.label}<span>→</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function PersonalView({ persona, roles, edges, timeline, onBack }) {
+function PersonalView({ cfg, persona, roles, edges, timeline, onBack }) {
   if (!persona) return null;
-  const conns = edges
-    .filter((e) => e.from === persona.id || e.to === persona.id)
-    .map((e) => {
-      const otherId = e.from === persona.id ? e.to : e.from;
-      const other = byId(roles, otherId);
-      const dir = e.type === "reports" ? (e.from === persona.id ? "reports to" : "manages") : e.type;
-      return other ? { title: other.title, dir, type: e.type } : null;
-    })
-    .filter(Boolean);
-
+  const conns = connectionsOf(cfg, persona, roles, edges);
+  const personaScenario = cfg.scenarios.find((s) => s.personalEntry && s.affected.some((a) => a.id === cfg.persona));
   return (
     <div className="req-personal">
       <div className="req-personal-grid">
         <section className="req-me">
-          <span className="req-eyebrow" style={{ color: DEPTS[persona.dept] }}>My role · {persona.dept}</span>
+          <span className="req-eyebrow" style={{ color: domainColor(cfg, persona.domain) }}>My role · {domainName(cfg, persona.domain)}</span>
           <h2 className="req-me-title">{persona.title}</h2>
-          <p className="req-person">{persona.person}</p>
-          <p className="req-summary">{persona.purpose}</p>
+          <p className="req-person">{(persona.people || []).join(", ") || persona.person || ""}</p>
+          {persona.purpose && <p className="req-summary">{persona.purpose}</p>}
 
-          <div className="req-block">
-            <h3>What I own</h3>
-            <div className="req-chips">{persona.resp.map((r) => <span key={r} className="chip">{r}</span>)}</div>
-          </div>
-          <div className="req-block">
-            <h3>My mandates</h3>
-            <div className="req-chips">{persona.mandates.map((m) => <span key={m} className="chip mandate">{m}</span>)}</div>
-          </div>
+          {persona.resp && persona.resp.length > 0 && (
+            <div className="req-block">
+              <h3>What I own</h3>
+              <div className="req-chips">{persona.resp.map((r) => <span key={r} className="chip">{r}</span>)}</div>
+            </div>
+          )}
+          {persona.mandates && persona.mandates.length > 0 && (
+            <div className="req-block">
+              <h3>My mandates</h3>
+              <div className="req-chips">{persona.mandates.map((m) => <span key={m} className="chip mandate">{m}</span>)}</div>
+            </div>
+          )}
           <div className="req-block">
             <h3>Who I work with</h3>
             {conns.map((c, i) => (
               <div className="req-conn" key={i}>
-                <span className={"req-conn-dot " + c.type} />
+                <span className="req-conn-dot" style={{ background: c.color }} />
                 <span className="req-conn-dir">{c.dir}</span>
                 <span className="req-conn-title">{c.title}</span>
               </div>
@@ -964,7 +740,9 @@ function PersonalView({ persona, roles, edges, timeline, onBack }) {
               </div>
             ))}
           </div>
-          <p className="req-tip">Run "Split Customer Success" in system view, then come back here to see the change land on this role.</p>
+          {personaScenario && (
+            <p className="req-tip">Run "{personaScenario.label}" in system view, then come back here to see the change land on this role.</p>
+          )}
           <button className="btn ghost wide" onClick={onBack}>Back to system view</button>
         </section>
       </div>
@@ -994,9 +772,15 @@ html, body { cursor: auto; }
 /* ---- landing ---- */
 .req-landing{max-width:820px; margin:0 auto; padding:56px 8px 40px;}
 .req-hero{font-family:var(--display); font-weight:800; font-size:clamp(40px,7vw,72px); letter-spacing:-.03em; margin:10px 0 14px; line-height:.98;}
-.req-pitch{font-family:var(--display); font-weight:600; font-size:clamp(20px,3vw,28px); color:var(--ink); margin:0 0 16px; letter-spacing:-.01em;}
-.req-sub{color:#B3A99A; font-size:16px; line-height:1.6; max-width:60ch; margin:0 0 36px;}
+.req-pitch{font-family:var(--display); font-weight:600; font-size:clamp(20px,3vw,28px); color:var(--ink); margin:0 0 22px; letter-spacing:-.01em;}
+.req-sub{color:#B3A99A; font-size:16px; line-height:1.6; max-width:60ch; margin:8px 0 32px;}
 .req-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+.req-company-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:10px 0 6px; max-width:620px;}
+.companycard{display:flex; flex-direction:column; gap:6px; text-align:left; background:var(--panel); border:1px solid var(--hair); border-radius:14px; padding:18px 18px; cursor:pointer; transition:.16s;}
+.companycard:hover{border-color:var(--gold);}
+.companycard.on{border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold);}
+.companycard-k{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+.companycard-t{font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:-.01em; color:var(--ink);}
 .req-scenario-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:12px 0 18px;}
 .scenariocard{display:flex; flex-direction:column; justify-content:space-between; gap:26px; text-align:left;
   background:var(--panel); border:1px solid var(--hair); border-radius:14px; padding:20px 18px; cursor:pointer; transition:.16s; min-height:130px;}
@@ -1005,6 +789,7 @@ html, body { cursor: auto; }
 .scenariocard-go{font-family:var(--mono); font-size:12px; color:var(--gold); letter-spacing:.04em;}
 .req-explore{background:none; border:none; color:var(--muted); font-family:var(--ui); font-size:14px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:4px 0;}
 .req-explore:hover{color:var(--ink);}
+.req-errlist{margin:6px 0 20px; padding-left:18px; color:#f0b6a6; font-size:14px; line-height:1.7; max-width:70ch;}
 
 /* ---- top bar ---- */
 .req-bar{display:flex; align-items:center; gap:20px; margin-bottom:16px; flex-wrap:wrap;}
@@ -1035,12 +820,11 @@ html, body { cursor: auto; }
 .req-ring{animation:reqpulse .5s ease-out;}
 
 .req-legend{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:12px; font-family:var(--mono); font-size:12px; color:var(--muted);}
-.req-legend .sw{display:inline-block; width:18px; height:0; border-top-width:2px; border-top-style:solid; vertical-align:middle; margin-right:6px;}
-.req-legend .sw.reports{border-color:#6b6459;}
-.req-legend .sw.handoff{border-color:#E5643C;}
-.req-legend .sw.dependency{border-color:#6C8CFF; border-top-style:dashed;}
-.req-legend .sw.shared{border-color:#D9492B; border-top-width:3px;}
+.req-legend .sw{display:inline-block; width:18px; height:0; border-top-width:2px; border-top-style:solid; border-top-color:#6b6459; vertical-align:middle; margin-right:6px;}
 .req-legend .hint{margin-left:auto;}
+.req-filter{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--muted); background:transparent; border:1px solid var(--hair); border-radius:20px; padding:4px 11px; cursor:pointer; transition:.14s;}
+.req-filter:hover{border-color:var(--muted); color:var(--ink);}
+.req-filter.on{background:var(--gold); border-color:var(--gold); color:#1a1408;}
 
 .req-scenariobar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; border-top:1px solid var(--hair); padding-top:14px;}
 .req-scenariobar-l{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-right:2px;}
@@ -1097,11 +881,7 @@ html, body { cursor: auto; }
 
 .req-conn{display:flex; align-items:center; gap:9px; padding:6px 0; font-size:13.5px; border-bottom:1px solid #201d19;}
 .req-conn:last-child{border-bottom:none;}
-.req-conn-dot{width:9px; height:9px; border-radius:50%; flex:none;}
-.req-conn-dot.reports{background:#6b6459;}
-.req-conn-dot.handoff{background:#E5643C;}
-.req-conn-dot.dependency{background:#6C8CFF;}
-.req-conn-dot.shared{background:#D9492B;}
+.req-conn-dot{width:9px; height:9px; border-radius:50%; flex:none; background:#6b6459;}
 .req-conn-dir{font-family:var(--mono); font-size:11px; color:var(--muted); min-width:74px;}
 .req-conn-title{color:var(--ink); font-weight:500;}
 .req-conn-label{font-family:var(--mono); font-size:10px; color:var(--muted); margin-left:auto;}
@@ -1136,6 +916,7 @@ html, body { cursor: auto; }
   .req-stage{grid-template-columns:1fr;}
   .req-personal-grid{grid-template-columns:1fr;}
   .req-scenario-grid{grid-template-columns:1fr;}
+  .req-company-grid{grid-template-columns:1fr;}
   .req-panel{max-height:none;}
 }
 @media (prefers-reduced-motion:reduce){
